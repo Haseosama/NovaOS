@@ -27,8 +27,11 @@ jobs:
       - name: Installation des dépendances de build
         run: |
           sudo apt-get update
+          # isolinux/syslinux-common + grub-*-bin + mtools : nécessaires pour
+          # l'ISO hybride BIOS+UEFI (syslinux + grub-efi) généré par live-build
           sudo apt-get install -y --no-install-recommends \
             live-build debootstrap xorriso squashfs-tools rsync wget \
+            isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin mtools \
             debian-archive-keyring
 
       - name: Construction de l'ISO

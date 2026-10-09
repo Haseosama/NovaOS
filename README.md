@@ -24,10 +24,11 @@ Elle est **sécurisée par défaut** et **démarre automatiquement sur le bureau
 
 - Un hôte **Debian 12/13** ou **Ubuntu 22.04+** (la construction se fait dans un chroot : **root requis**)
 - ~20 Go d'espace disque libres, 4 Go de RAM
-- Les outils : `live-build`, `debootstrap`, `xorriso`, `squashfs-tools`, `rsync`, `wget`
+- Les outils : `live-build`, `debootstrap`, `xorriso`, `squashfs-tools`, `rsync`, `wget` + les outils de l'ISO hybride BIOS+UEFI : `isolinux`, `syslinux-common`, `grub-pc-bin`, `grub-efi-amd64-bin`, `mtools`
 
 ```bash
-sudo apt install live-build debootstrap xorriso squashfs-tools rsync wget
+sudo apt install live-build debootstrap xorriso squashfs-tools rsync wget \
+  isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin mtools
 ```
 
 ## 🏗️ Construire l'ISO
@@ -39,9 +40,9 @@ sudo ./build.sh
 Le script :
 
 1. nettoie l'état de build précédent,
-2. configure **live-build** (Debian `trixie`, `amd64`, dépôts officiels + sécurité, installeur **Calamares**),
-3. construit le chroot en appliquant les hooks NovaOS (thème, sécurité, autologin, installateur),
-4. produit **`novaos-2026.10-amd64.iso`** + sa somme de contrôle SHA256.
+2. configure **live-build** (Debian `trixie`, `amd64`, dépôts officiels + sécurité, **pas** d'installeur Debian — l'installateur est **Calamares**, installé par paquets et lancé depuis le bureau),
+3. construit le chroot en appliquant les hooks NovaOS (branding, thème, sécurité, autologin, installateur, finalisation),
+4. produit **`novaos-2026.10-amd64.hybrid.iso`** (ISO **hybride BIOS+UEFI**, inscriptible directement sur clé USB avec `dd`) + sa somme de contrôle SHA256.
 
 ⏱️ Comptez **30 à 90 minutes** selon la machine et la connexion.
 
@@ -68,12 +69,13 @@ Démarre l'ISO dans **QEMU** (KVM automatiquement si disponible, 4 Go de RAM, r�
 ## 💿 Installer sur une machine
 
 1. Gravez l'ISO sur une clé USB (`sudo dd if=novaos-*.iso of=/dev/sdX bs=4M status=progress` — ou Ventoy).
-2. Démarrez dessus, choisissez **« Installer NovaOS »** (installateur graphique **Calamares**).
-3. À l'étape de partitionnement : choisissez **« Effacer le disque »** et cochez **« Chiffrer »** (LUKS) — **fortement recommandé** pour la sécurité.
-4. Créez votre compte (12 caractères minimum, complexité requise).
-5. Redémarrez : **le bureau s'ouvre automatiquement**, sans saisie de mot de passe.
+2. Démarrez dessus : la session **live** s'ouvre automatiquement sur le bureau. Utilisateur live : **« user »**, mot de passe : **« live »** (`sudo` fonctionne sans mot de passe dans la session live).
+3. Double-cliquez sur l'icône **« Installer NovaOS »** du bureau (installateur graphique **Calamares**, lancé en root sans mot de passe).
+4. À l'étape de partitionnement : choisissez **« Effacer le disque »** et cochez **« Chiffrer »** (LUKS) — **fortement recommandé** pour la sécurité.
+5. Créez votre compte (12 caractères minimum, complexité requise).
+6. Redémarrez : **le bureau s'ouvre automatiquement**, sans saisie de mot de passe.
 
-> 💡 Le compte « live » de la clé USB est automatiquement verrouillé sur le système installé.
+> 💡 Le compte « live » de la clé USB est automatiquement verrouillé sur le système installé, et l'icône « Installer NovaOS » est retirée du bureau.
 
 ## 🔓 Démarrage automatique (autologin)
 
@@ -87,6 +89,7 @@ NovaOS démarre directement sur le bureau KDE (session Plasma Wayland).
   ```
 
 - Le service `novaos-autologin-setup.service` écrit la configuration SDDM (`/etc/sddm.conf.d/99-novaos-autologin.conf`) **au démarrage**, pour l'utilisateur principal — que ce soit l'utilisateur live de l'ISO ou le compte créé à l'installation.
+- En cas de **désactivation**, le service neutralise aussi l'autologin écrit dans `/etc/sddm.conf` par live-config (session live) ou Calamares (système installé) : chez SDDM, ce fichier a la **priorité** sur `/etc/sddm.conf.d/`.
 - Après une **déconnexion**, l'écran de connexion réapparaît (politique sécurisée : `Relogin=false`).
 
 ## 🔒 Sécurité
@@ -107,10 +110,11 @@ Tout se passe dans le dépôt, avant de reconstruire l'ISO :
 | Écran de connexion (SDDM) | `config/includes.chroot/usr/share/sddm/themes/novaos/` |
 | Logo NovaOS | `assets/branding/novaos-logo.svg` (copie dans `usr/share/novaos/`) |
 | Paquets installés | `config/package-lists/*.list.chroot` |
-| Durcissement | `config/hooks/live/0130-security.chroot` |
-| Connexion automatique | `config/hooks/live/0140-autologin.chroot` + `config/includes.chroot/etc/novaos/autologin.conf` |
+| Durcissement | `config/hooks/live/0130-security.hook.chroot` |
+| Connexion automatique | `config/hooks/live/0140-autologin.hook.chroot` + `config/includes.chroot/etc/novaos/autologin.conf` |
 | Installateur (Calamares) | `config/includes.chroot/usr/share/novaos/calamares-staging/` |
-| Localisation (FR) | `config/hooks/live/0160-finalize.chroot` |
+| Icône « Installer NovaOS » | `config/includes.chroot/usr/local/bin/novaos-install` + `config/includes.chroot/etc/skel/Desktop/` |
+| Localisation (FR) | `config/hooks/live/0160-finalize.hook.chroot` |
 
 ## 📁 Structure du projet
 
@@ -124,18 +128,20 @@ NovaOS/
 ├── .github/workflows/build-iso.yml    # CI : construit l'ISO à chaque push
 ├── assets/
 │   ├── branding/novaos-logo.svg      # logo (source)
-│   └── installer/preseed-novaos.cfg  # preseed d-i (solution de repli)
+│   └── installer/preseed-novaos.cfg  # preseed d-i (référence — non utilisé)
 └── config/                           # configuration live-build
     ├── package-lists/                # paquets par thème (bureau, applis, sécurité…)
-    ├── hooks/live/                   # scripts exécutés dans le chroot
-    │   ├── 0110-branding.chroot
-    │   ├── 0120-theme-win11.chroot
-    │   ├── 0130-security.chroot
-    │   ├── 0140-autologin.chroot
-    │   ├── 0150-installer.chroot
-    │   └── 0160-finalize.chroot
+    ├── hooks/                        # scripts exécutés dans le chroot
+    │   ├── normal/                   # (live-build n'exécute les hooks locaux
+    │   │   └── 0110-branding.hook.chroot   # que si normal/ ET live/ sont non vides)
+    │   └── live/
+    │       ├── 0120-theme-win11.hook.chroot
+    │       ├── 0130-security.hook.chroot
+    │       ├── 0140-autologin.hook.chroot
+    │       ├── 0150-installer.hook.chroot
+    │       └── 0160-finalize.hook.chroot
     └── includes.chroot/              # fichiers copiés tels quels dans le système
-        ├── etc/                      # sysctl, APT, SDDM, systemd, skel, autostart…
+        ├── etc/                      # sysctl, APT, SDDM, systemd, skel, autostart, polkit, live-config…
         └── usr/                      # thèmes, fonds d'écran, scripts, Calamares…
 ```
 

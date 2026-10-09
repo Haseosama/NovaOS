@@ -21,7 +21,8 @@ test:
 check:
 	bash -n build.sh
 	bash -n vm-test.sh
-	@find config/hooks -name '*.chroot' -exec bash -n {} \;
+	@find config/hooks -name '*.hook.chroot' -exec bash -n {} \;
+	@find config/includes.chroot/usr/local/bin config/includes.chroot/etc/profile.d -name 'novaos-*' -type f -exec bash -n {} \;
 	@echo "✔ Syntaxe des scripts OK"
 
 clean:

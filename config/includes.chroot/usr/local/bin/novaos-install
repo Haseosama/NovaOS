@@ -1,0 +1,72 @@
+#!/bin/bash
+#
+# NovaOS — lanceur de l'installateur (session live uniquement)
+#
+# Appelé par l'icône « Installer NovaOS » du bureau (session live).
+#   1. vérifie qu'on est bien dans la session live (clé USB / DVD) ;
+#   2. demande confirmation ;
+#   3. lance Calamares en root :
+#      - d'abord via pkexec (propre : DISPLAY/XAUTHORITY transmis à Calamares,
+#        qui retombe alors sur XWayland) — autorisé sans mot de passe pour
+#        l'utilisateur live par la règle polkit NovaOS ;
+#      - sinon en repli via sudo (live-config accorde sudo sans mot de passe
+#        à l'utilisateur live : /etc/sudoers.d/live).
+#
+set -u
+
+CALAMARES="$(command -v calamares 2>/dev/null || true)"
+[ -n "$CALAMARES" ] || CALAMARES=/usr/bin/calamares
+
+msgbox() {
+    # $1 = texte ; essaie kdialog (KDE), sinon zenity, sinon la console
+    if command -v kdialog >/dev/null 2>&1; then
+        kdialog --title "NovaOS" --msgbox "$1" >/dev/null 2>&1
+    elif command -v zenity >/dev/null 2>&1; then
+        zenity --info --title "NovaOS" --text "$1" >/dev/null 2>&1
+    else
+        echo "NovaOS : $1"
+    fi
+}
+
+# --- 1. Session live uniquement ---
+if [ ! -d /run/live/medium ]; then
+    msgbox "L'installateur NovaOS ne peut être lancé que depuis la session live (démarrez depuis la clé USB ou le DVD). Sur un système installé, NovaOS est déjà en place."
+    exit 1
+fi
+
+# --- 2. Confirmation ---
+if command -v kdialog >/dev/null 2>&1; then
+    kdialog --title "Installer NovaOS" --warningyesno "Installer NovaOS sur ce disque ?
+
+L'installateur Calamares va s'ouvrir. À l'étape de partitionnement, choisissez « Effacer le disque » et cochez « Chiffrer » (LUKS) — fortement recommandé.
+
+Le disque sera complètement effacé." >/dev/null 2>&1 || exit 0
+elif command -v zenity >/dev/null 2>&1; then
+    zenity --question --title "Installer NovaOS" --text "Installer NovaOS sur ce disque ?
+
+L'installateur Calamares va s'ouvrir (chiffrement LUKS recommandé à l'étape de partitionnement).
+
+Le disque sera complètement effacé." >/dev/null 2>&1 || exit 0
+fi
+
+# --- 3. Lancement de Calamares en root ---
+# Autorise root à joindre le serveur X de la session (XWayland), au cas où le
+# cookie XAUTHORITY ne suffirait pas.
+if command -v xhost >/dev/null 2>&1; then
+    xhost +si:localuser:root >/dev/null 2>&1 || true
+fi
+
+# Essai 1 : pkexec (environnement GUI transmis ; Calamares retombe sur XWayland)
+if command -v pkexec >/dev/null 2>&1; then
+    if pkexec "$CALAMARES"; then
+        exit 0
+    fi
+fi
+
+# Essai 2 : sudo, avec l'environnement de session transmis explicitement
+# (sudo ne transmet pas WAYLAND_DISPLAY/XDG_RUNTIME_DIR par défaut).
+ENV_ARGS=()
+[ -n "${DISPLAY:-}" ]        && ENV_ARGS+=("DISPLAY=$DISPLAY")
+[ -n "${XAUTHORITY:-}" ]    && ENV_ARGS+=("XAUTHORITY=$XAUTHORITY")
+[ -n "${XDG_RUNTIME_DIR:-}" ] && ENV_ARGS+=("XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR")
+exec sudo env "${ENV_ARGS[@]}" "$CALAMARES"

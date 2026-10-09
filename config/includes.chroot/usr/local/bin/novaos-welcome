@@ -31,8 +31,11 @@ Quelques conseils pour rester en sécurité :
   • Verrouillez votre session (Ctrl+Alt+L) quand vous vous éloignez.
   • Le pare-feu (UFW) est actif : gérez-le avec l'application « Pare-feu » (Gufw).
   • Les mises à jour de sécurité s'installent automatiquement.
-  • À l'installation, choisissez le chiffrement LUKS du disque.
   • La connexion automatique est activée : pour la désactiver, éditez /etc/novaos/autologin.conf (NOVAOS_AUTOLOGIN=false) en root, puis redémarrez.
+
+En session live (clé USB / DVD) :
+  • Pour installer NovaOS sur ce disque : double-cliquez sur l'icône « Installer NovaOS » du bureau (chiffrement LUKS proposé).
+  • L'utilisateur live est « user » et son mot de passe est « live » (sudo fonctionne sans mot de passe dans la session live).
 
 Bonne découverte !"
 

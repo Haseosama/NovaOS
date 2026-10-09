@@ -12,6 +12,13 @@ if [ -d "$STAGING" ]; then
     cp -a "$STAGING"/. /etc/calamares/
 fi
 
+# --- Groupe « novaos-live » ---
+# L'utilisateur live y est ajouté au démarrage (voir /etc/live/config.conf.d/).
+# Groupe vide sur un système installé : il sert uniquement à la règle polkit
+# qui autorise l'icône « Installer NovaOS » à lancer Calamares sans mot de passe
+# dans la session live (voir /etc/polkit-1/rules.d/49-novaos-live-installer.rules).
+groupadd -f novaos-live 2>/dev/null || true
+
 # --- Calamares (au cas où live-build ne l'aurait pas déjà installé) ---
 if ! command -v calamares >/dev/null 2>&1; then
     apt-get update -qq >/dev/null 2>&1 || true

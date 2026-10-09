@@ -1,3 +1,6 @@
 # NovaOS — installateur graphique Calamares
 # (propose notamment le chiffrement LUKS complet du disque à l'installation)
 calamares
+# Configuration/module Calamares maintenue par Debian (sert de base sûre :
+# notre /etc/calamares NovaOS est déployé par-dessus par le hook 0150)
+calamares-settings-debian

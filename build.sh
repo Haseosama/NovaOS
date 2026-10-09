@@ -54,9 +54,10 @@ if [ "$(id -u)" -ne 0 ]; then
     die "Ce script doit être exécuté en root : sudo ./build.sh"
 fi
 
-for dep in lb xorriso mksquashfs rsync wget debootstrap; do
+# Outils nécessaires sur l'hôte (l'ISO est hybride BIOS+UEFI : syslinux + grub-efi)
+for dep in lb xorriso mksquashfs rsync wget debootstrap isohybrid grub-mkimage; do
     command -v "$dep" >/dev/null 2>&1 \
-        || die "Dépendance manquante : '$dep'. Installez : sudo apt install live-build debootstrap xorriso squashfs-tools rsync wget"
+        || die "Dépendance manquante : '$dep'. Installez : sudo apt install live-build debootstrap xorriso squashfs-tools rsync wget isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin mtools"
 done
 
 log "Distribution : Debian $DISTRO ($ARCH)"
@@ -79,13 +80,14 @@ lb config \
     --mirror-binary-security "$MIRROR_SECURITY" \
     --apt-recommends true \
     --bootloaders "syslinux,grub-efi" \
-    --debian-installer calamares \
+    --binary-images iso-hybrid \
+    --debian-installer none \
     --image-name "$IMAGE_NAME" \
     --iso-application "NovaOS" \
     --iso-publisher "NovaOS Project" \
-    --iso-preparer "NovaOS build.sh — Debian live-build" \
+    --iso-preparer "NovaOS build.sh (Debian live-build)" \
     --iso-volume "NovaOS" \
-    --bootappend-live "boot=live components quiet splash"
+    --bootappend-live "boot=live components quiet splash locales=fr_FR.UTF-8 keyboard-layouts=fr"
 
 # ------------------------------------------------------------------ build -----
 log "Construction de l'ISO (30 à 90 minutes selon la machine)…"
@@ -101,4 +103,5 @@ log "✔ ISO générée      : $SCRIPT_DIR/$ISO"
 log "✔ Somme SHA256     : $SCRIPT_DIR/${ISO}.sha256sums"
 log "✔ Vérification     : sha256sum -c ${ISO}.sha256sums"
 log "✔ Test sans install: ./vm-test.sh"
-log "✔ Installation     : gravez l'ISO sur une clé USB et démarrez dessus"
+log "✔ Installation     : gravez l'ISO sur une clé USB, démarrez dessus,"
+log "                     puis cliquez sur l'icône « Installer NovaOS » du bureau"

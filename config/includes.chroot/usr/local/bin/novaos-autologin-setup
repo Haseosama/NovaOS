@@ -20,7 +20,14 @@ NOVAOS_AUTOLOGIN=true
 [ -r "$TOGGLE" ] && . "$TOGGLE"
 
 if [ "${NOVAOS_AUTOLOGIN}" != "true" ]; then
+    # Supprime notre configuration…
     rm -f "$CONF_FILE"
+    # …et neutralise l'autologin écrit dans /etc/sddm.conf par live-config
+    # (session live) ou par Calamares (système installé) : chez SDDM, le
+    # fichier /etc/sddm.conf a la PRIORITÉ sur /etc/sddm.conf.d/.
+    if [ -f /etc/sddm.conf ]; then
+        sed -i '/^\[Autologin\]/,/^\[/{ /^User=/s/^/# /; }' /etc/sddm.conf
+    fi
     exit 0
 fi
 

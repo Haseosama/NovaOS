@@ -17,4 +17,13 @@ if getent passwd user >/dev/null 2>&1; then
     fi
 fi
 
+# Sur un système installé (hors session live), l'icône « Installer NovaOS » du
+# bureau ne sert plus : la retirer des comptes humains.
+if [ ! -d /run/live/medium ]; then
+    for home in /home/*; do
+        [ -d "$home/Desktop" ] || continue
+        rm -f "$home/Desktop/Installer NovaOS.desktop" 2>/dev/null || true
+    done
+fi
+
 exit 0
