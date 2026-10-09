@@ -1,0 +1,18 @@
+#!/usr/bin/env python3
+"""
+NovaOS Defender Standalone Security Center
+Real-time virus scanner, heuristic analysis, and quarantine monitor.
+"""
+
+import sys
+import os
+
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+from shell.desktop import NovaDesktop
+
+if __name__ == "__main__":
+    app = NovaDesktop()
+    app.show_defender_center()

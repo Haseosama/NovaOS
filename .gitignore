@@ -1,0 +1,23 @@
+# Object files & intermediate binaries
+*.o
+*.so
+*.bin
+*.img
+BOOTX64.EFI
+vmlinuz-novaos
+initrd-novaos.img
+efiboot.img
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Node / Vite temporary files (if any)
+node_modules/
+dist/*.iso
+
+# Keep SHA256SUMS and dist directory structure
+!dist/SHA256SUMS
+!dist/.gitkeep

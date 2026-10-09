@@ -1,0 +1,18 @@
+#!/usr/bin/env python3
+"""
+NovaOS Terminal (PowerShell Neo)
+Futuristic cybernetic shell with real-time telemetry and security tools.
+"""
+
+import sys
+import os
+
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+from shell.terminal import NovaTerminal
+
+if __name__ == "__main__":
+    term = NovaTerminal()
+    term.run_interactive()
