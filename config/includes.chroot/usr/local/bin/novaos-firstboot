@@ -1,0 +1,20 @@
+#!/bin/bash
+#
+# NovaOS — sécurisation du premier démarrage
+#
+# Verrouille le compte « live » (user) si le système a été installé et qu'un
+# autre utilisateur principal existe. Sur l'ISO live (où « user » est le seul
+# compte humain), le script ne fait rien.
+#
+set -u
+
+if getent passwd user >/dev/null 2>&1; then
+    other="$(getent passwd | awk -F: '$1 != "user" && $3 >= 1000 && $3 < 65534 && $7 !~ /(nologin|false)$/ { print $1; exit }')"
+    if [ -n "$other" ]; then
+        # Le compte live ne doit plus pouvoir ouvrir de session
+        usermod --lock user >/dev/null 2>&1 || true
+        usermod --shell /usr/sbin/nologin user >/dev/null 2>&1 || true
+    fi
+fi
+
+exit 0

@@ -1,0 +1,34 @@
+#!/bin/bash
+#
+# NovaOS — hook live-build (étape chroot) : branding
+# S'exécute à l'intérieur du chroot, après l'installation des paquets.
+#
+set -e
+
+# --- /etc/issue (écrans de connexion console) ---
+cat > /etc/issue <<'EOF'
+NovaOS 2026.10 — base Debian GNU/Linux 13 « trixie » \n \l
+
+Bienvenue dans NovaOS : bureau KDE Plasma 6, look futuriste inspiré de Windows 11.
+EOF
+
+cat > /etc/issue.net <<'EOF'
+NovaOS 2026.10 — base Debian GNU/Linux 13 « trixie »
+EOF
+
+# --- Informations de distribution (lsb_release) ---
+cat > /etc/lsb-release <<'EOF'
+DISTRIB_ID=NovaOS
+DISTRIB_RELEASE=2026.10
+DISTRIB_CODENAME=nova
+DISTRIB_DESCRIPTION="NovaOS 2026.10 (Debian 13 trixie)"
+EOF
+
+# --- Nom d'hôte par défaut ---
+echo "novaos" > /etc/hostname
+
+# --- Permissions des scripts NovaOS ---
+chmod 0755 /usr/local/bin/novaos-* 2>/dev/null || true
+chmod 0644 /etc/profile.d/novaos-*.sh 2>/dev/null || true
+
+exit 0

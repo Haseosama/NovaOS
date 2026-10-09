@@ -1,0 +1,52 @@
+# NovaOS — environnement de bureau KDE Plasma 6 (base Debian 13 « trixie »)
+# Look futuriste inspiré de Windows 11 : barre centrée, thème sombre, coins arrondis
+
+# --- Bureau Plasma 6 (Wayland par défaut) ---
+plasma-desktop
+plasma-workspace
+plasma-workspace-wallpapers
+sddm
+kde-config-sddm
+kde-cli-tools
+kdialog
+plasma-nm
+plasma-pa
+plasma-systemmonitor
+plasma-disks
+powerdevil
+kdeplasma-addons
+kwin-x11
+xwayland
+
+# --- Thèmes / icônes (look Windows 11) ---
+breeze
+breeze-icon-theme
+breeze-cursor-theme
+breeze-gtk
+papirus-icon-theme
+
+# --- Audio (PipeWire) ---
+pipewire-audio
+
+# --- Matériel & médias amovibles ---
+upower
+bluez
+udisks2
+ntfs-3g
+exfatprogs
+dosfstools
+wpasupplicant
+thermald
+
+# --- Locales & saisie ---
+locales
+console-setup
+keyboard-configuration
+xdg-utils
+xdg-user-dirs
+
+# --- Polices ---
+fonts-inter
+fonts-jetbrains-mono
+fonts-noto-core
+fonts-noto-color-emoji

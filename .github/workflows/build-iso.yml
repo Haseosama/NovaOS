@@ -1,0 +1,50 @@
+name: Build NovaOS ISO
+
+on:
+  push:
+    branches:
+      - main
+      - "arena/**"
+    paths:
+      - "config/**"
+      - "assets/**"
+      - "build.sh"
+      - ".github/workflows/build-iso.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-iso:
+    name: NovaOS — construction de l'ISO (Debian live-build)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - name: Récupération du dépôt
+        uses: actions/checkout@v4
+
+      - name: Installation des dépendances de build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            live-build debootstrap xorriso squashfs-tools rsync wget \
+            debian-archive-keyring
+
+      - name: Construction de l'ISO
+        run: sudo ./build.sh
+
+      - name: Somme de contrôle SHA256
+        run: |
+          ISO="$(ls novaos-*.iso | head -n1)"
+          sha256sum "$ISO" | tee "${ISO}.sha256sums"
+
+      - name: Publication de l'ISO (artefact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: novaos-iso
+          path: |
+            novaos-*.iso
+            novaos-*.iso.sha256sums
+          if-no-files-found: error
+          retention-days: 30

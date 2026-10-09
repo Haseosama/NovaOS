@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# NovaOS — hook live-build : thème futuriste façon Windows 11 (KDE Plasma 6)
+#
+# Le thème lui-même est déposé via config/includes.chroot :
+#   - /usr/share/color-schemes/NovaOS-Dark.colors   (palette)
+#   - /etc/xdg/kdeglobals, /etc/xdg/kwinrc           (thème sombre, accent #0078D4)
+#   - /etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc  (barre centrée Win11)
+#   - /usr/share/wallpapers/NovaOS-*                 (fonds d'écran)
+#   - /usr/share/sddm/themes/novaos/                 (écran de connexion)
+#
+set -e
+
+# --- Outil d'infos système « futuriste » (fastfetch, sinon neofetch) ---
+if ! command -v fastfetch >/dev/null 2>&1; then
+    apt-get update -qq >/dev/null 2>&1 || true
+    apt-get install -y fastfetch >/dev/null 2>&1 \
+        || apt-get install -y neofetch >/dev/null 2>&1 \
+        || true
+fi
+
+# --- Applique la configuration bureau aux comptes existants (ex. user live) ---
+# Les comptes créés à l'installation l'obtiennent via /etc/skel.
+if [ -d /etc/skel/.config ]; then
+    for home in /home/*; do
+        [ -d "$home" ] || continue
+        user="$(basename "$home")"
+        mkdir -p "$home/.config"
+        cp -a /etc/skel/.config/. "$home/.config/" 2>/dev/null || true
+        chown -R "$user:$user" "$home/.config" 2>/dev/null || true
+    done
+fi
+
+# --- fastfetch / neofetch à l'ouverture d'un terminal interactif ---
+# Désactivable : export NOVAOS_NO_FETCH=1 ou créer ~/.config/novaos/no-fetch
+if ! grep -q "novaos-fastfetch" /etc/bash.bashrc 2>/dev/null; then
+    cat >> /etc/bash.bashrc <<'EOF'
+
+# --- NovaOS : infos système à l'ouverture d'un terminal ---
+# Désactiver : export NOVAOS_NO_FETCH=1 ou créer ~/.config/novaos/no-fetch
+if [ -n "$PS1" ] && [ -z "${NOVAOS_NO_FETCH:-}" ] && [ ! -f "$HOME/.config/novaos/no-fetch" ]; then
+    if command -v fastfetch >/dev/null 2>&1; then
+        fastfetch
+    elif command -v neofetch >/dev/null 2>&1; then
+        neofetch
+    fi
+fi
+EOF
+fi
+
+exit 0

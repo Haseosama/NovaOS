@@ -1,0 +1,54 @@
+#!/bin/bash
+#
+# NovaOS — hook live-build : finalisation
+#
+set -e
+
+# --- Localisation : français par défaut ---
+apt-get install -y locales >/dev/null 2>&1 || true
+if [ -f /etc/locale.gen ]; then
+    sed -i \
+        -e 's/^# *fr_FR.UTF-8 UTF-8/fr_FR.UTF-8 UTF-8/' \
+        -e 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' \
+        /etc/locale.gen
+    locale-gen >/dev/null 2>&1 || true
+fi
+if locale -a 2>/dev/null | grep -q '^fr_FR.utf8$'; then
+    echo 'LANG="fr_FR.UTF-8"' > /etc/default/locale
+    update-locale LANG=fr_FR.UTF-8 >/dev/null 2>&1 || true
+fi
+
+# --- Fuseau horaire : Europe/Paris ---
+ln -sf /usr/share/zoneinfo/Europe/Paris /etc/localtime
+echo "Europe/Paris" > /etc/timezone
+
+# --- Clavier : français (AZERTY) par défaut ---
+if [ -f /etc/default/keyboard ]; then
+    sed -i \
+        -e 's/^XKBLAYOUT=.*/XKBLAYOUT="fr"/' \
+        -e 's/^XKBVARIANT=.*/XKBVARIANT=""/' \
+        /etc/default/keyboard
+fi
+
+# --- Plymouth : thème « spinner » (futuriste) si disponible ---
+apt-get install -y plymouth-themes >/dev/null 2>&1 || true
+if [ -f /etc/plymouth/plymouthd.conf ]; then
+    if [ -d /usr/share/plymouth/themes/spinner ]; then
+        THEME=spinner
+    elif [ -d /usr/share/plymouth/themes/solar ]; then
+        THEME=solar
+    else
+        THEME=details
+    fi
+    sed -i \
+        -e "s/^Theme=.*/Theme=$THEME/" \
+        -e 's/^ShowDelay=.*/ShowDelay=0/' \
+        /etc/plymouth/plymouthd.conf
+fi
+
+# --- Nettoyage ---
+apt-get clean
+rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* 2>/dev/null || true
+mkdir -p /var/lib/apt/lists/partial
+
+exit 0

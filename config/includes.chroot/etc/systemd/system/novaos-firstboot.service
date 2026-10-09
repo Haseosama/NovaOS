@@ -1,0 +1,13 @@
+[Unit]
+Description=NovaOS — sécurisation du premier démarrage
+# Verrouille le compte « live » (user) sur le système installé
+After=local-fs.target
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/novaos-firstboot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,24 @@
+# NovaOS — artefacts de build live-build (ne jamais committer)
+auto/
+cache/
+chroot/
+binary/
+.build/
+
+# ISO et empreintes
+*.iso
+*.iso.*
+*.squashfs
+*.manifest
+*.manifest-reverse
+*.packages
+*.buildlog
+*.list.chroot_install
+
+# Fichiers temporaires
+*.log
+*.tmp
+.DS_Store
+
+# Génération d'images (candidats non retenus)
+Unselected files/

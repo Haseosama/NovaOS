@@ -1,0 +1,22 @@
+#!/bin/bash
+#
+# NovaOS — hook live-build : démarrage automatique sur le bureau
+#
+# La connexion automatique SDDM est écrite au démarrage par le service
+# novaos-autologin-setup.service (fichier /etc/sddm.conf.d/99-novaos-autologin.conf).
+# Elle s'applique à l'utilisateur principal, sur l'ISO live comme sur le
+# système installé. Désactivable via /etc/novaos/autologin.conf.
+#
+set -e
+
+# --- Services NovaOS ---
+systemctl enable novaos-firstboot.service 2>/dev/null || true
+systemctl enable novaos-autologin-setup.service 2>/dev/null || true
+
+# --- SDDM = gestionnaire d'affichage, démarrage graphique par défaut ---
+systemctl enable sddm.service 2>/dev/null || true
+systemctl set-default graphical.target 2>/dev/null || true
+
+# Le thème SDDM « novaos » est sélectionné via /etc/sddm.conf.d/10-novaos-theme.conf
+
+exit 0

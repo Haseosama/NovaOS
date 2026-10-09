@@ -1,0 +1,45 @@
+#!/bin/bash
+#
+# NovaOS — message de bienvenue (premier démarrage de la session)
+#
+# Affiche un message de bienvenue avec les conseils de sécurité, une seule
+# fois par compte. Applique aussi le fond d'écran NovaOS (sécurité si le
+# thème n'a pas été appliqué).
+#
+set -u
+
+MARKER_DIR="$HOME/.config/novaos"
+MARKER="$MARKER_DIR/welcome-shown"
+
+mkdir -p "$MARKER_DIR" 2>/dev/null || true
+if [ -f "$MARKER" ]; then
+    exit 0
+fi
+touch "$MARKER" 2>/dev/null || true
+
+# — Fond d'écran NovaOS (au cas où le thème n'aurait pas été appliqué) —
+if command -v plasma-apply-wallpaper >/dev/null 2>&1; then
+    plasma-apply-wallpaper /usr/share/wallpapers/NovaOS-Bloom/contents/images/1920x1080.jpg >/dev/null 2>&1 || true
+fi
+
+# — Message —
+MESSAGE="Bienvenue dans NovaOS 2026.10 !
+
+NovaOS est basé sur Debian 13 « trixie » et propose un bureau KDE Plasma 6 au look futuriste inspiré de Windows 11.
+
+Quelques conseils pour rester en sécurité :
+  • Verrouillez votre session (Ctrl+Alt+L) quand vous vous éloignez.
+  • Le pare-feu (UFW) est actif : gérez-le avec l'application « Pare-feu » (Gufw).
+  • Les mises à jour de sécurité s'installent automatiquement.
+  • À l'installation, choisissez le chiffrement LUKS du disque.
+  • La connexion automatique est activée : pour la désactiver, éditez /etc/novaos/autologin.conf (NOVAOS_AUTOLOGIN=false) en root, puis redémarrez.
+
+Bonne découverte !"
+
+if command -v kdialog >/dev/null 2>&1; then
+    kdialog --title "Bienvenue dans NovaOS" --msgbox "$MESSAGE" >/dev/null 2>&1 || true
+elif command -v zenity >/dev/null 2>&1; then
+    zenity --info --title "Bienvenue dans NovaOS" --text "$MESSAGE" >/dev/null 2>&1 || true
+fi
+
+exit 0

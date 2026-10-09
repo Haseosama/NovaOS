@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Bienvenue dans NovaOS
+Name[fr]=Bienvenue dans NovaOS
+Comment=Message de bienvenue et conseils de sécurité NovaOS
+Comment[fr]=Message de bienvenue et conseils de sécurité NovaOS
+Exec=/usr/local/bin/novaos-welcome
+Icon=/usr/share/novaos/novaos-logo.svg
+Terminal=false
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-after=panel

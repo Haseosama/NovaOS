@@ -1,0 +1,15 @@
+[Unit]
+Description=NovaOS — connexion automatique sur le bureau (SDDM)
+Documentation=https://github.com/Haseosama/NovaOS/blob/main/README.md
+# S'exécute avant le gestionnaire d'affichage, après le premier démarrage
+After=novaos-firstboot.service local-fs.target
+Before=display-manager.service
+ConditionPathExists=/etc/sddm.conf.d
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/novaos-autologin-setup
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

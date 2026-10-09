@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Centre de bienvenue Plasma
+Comment=Désactivé par NovaOS (remplacé par le message de bienvenue NovaOS)
+Exec=plasma-welcome
+Hidden=true

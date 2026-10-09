@@ -1,0 +1,14 @@
+{
+    "KPlugin": {
+        "Id": "com.novaos.bloom",
+        "Name": "NovaOS Bloom",
+        "Name[fr]": "NovaOS Bloom",
+        "Description": "Fond d'écran futuriste NovaOS — vagues de lumière bleue et violette",
+        "Description[fr]": "Fond d'écran futuriste NovaOS — vagues de lumière bleue et violette",
+        "Version": "1.0",
+        "License": "CC-BY-SA-4.0",
+        "EnabledByDefault": true
+    },
+    "X-Plasma-API": "Wallpaper",
+    "MimeType": "image/jpeg"
+}

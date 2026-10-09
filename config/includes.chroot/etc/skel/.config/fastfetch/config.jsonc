@@ -1,0 +1,45 @@
+{
+    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+    "logo": {
+        "type": "file",
+        "source": "/usr/share/novaos/novaos-ascii.txt",
+        "padding": {
+            "top": 1,
+            "left": 2
+        }
+    },
+    "display": {
+        "separator": " ▸ ",
+        "brightColor": true,
+        "color": {
+            "keys": "#3daee9",
+            "output": "#eff0f1",
+            "separator": "#0078d4"
+        }
+    },
+    "modules": [
+        "title",
+        "separator",
+        "os",
+        "host",
+        "kernel",
+        "uptime",
+        "packages",
+        "shell",
+        "display",
+        "de",
+        "wm",
+        "theme",
+        "icons",
+        "cursor",
+        "terminal",
+        "cpu",
+        "gpu",
+        "memory",
+        "disk",
+        "battery",
+        "localip",
+        "break",
+        "colors"
+    ]
+}

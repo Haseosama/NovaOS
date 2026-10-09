@@ -1,0 +1,34 @@
+componentName: novaos
+
+strings:
+    productName:        NovaOS
+    versionName:        "2026.10"
+    shortProductName:   NovaOS
+    shortVersionName:   "2026.10"
+    versionedName:      NovaOS 2026.10
+    shortVersionedName: NovaOS 2026.10
+    productUrl:         https://github.com/Haseosama/NovaOS
+    supportUrl:         https://github.com/Haseosama/NovaOS/discussions
+    bugReportUrl:       https://github.com/Haseosama/NovaOS/issues
+    privacyUrl:         https://github.com/Haseosama/NovaOS/blob/main/SECURITY.md
+    releaseNotesUrl:    https://github.com/Haseosama/NovaOS/releases
+    knownIssuesUrl:     https://github.com/Haseosama/NovaOS/issues
+    maintainerName:     NovaOS Project
+    maintainerUrl:      https://github.com/Haseosama
+
+images:
+    productBanner:      banner.png
+    productIcon:        logo.png
+    productLogo:        logo.png
+    productWallpaper:   wallpaper.jpg
+
+slideshow:
+    - slide1.jpg
+    - slide2.jpg
+
+style:
+    sidebarBackground:    "#1b1e27"
+    sidebarText:          "#eff0f1"
+    sidebarTextHighlight: "#3daee9"
+    sidebarIcon:          "#3daee9"
+    windowExpands:        false
