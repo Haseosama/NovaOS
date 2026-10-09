@@ -31,8 +31,8 @@ def run_cmd(cmd: str):
 
 def ensure_binaries():
     print("[1/5] Compiling and validating low-level bootloaders...")
-    # Assemble MBR / El Torito boot sector
-    run_cmd("as --32 boot/bootsector.s -o boot/bootsector.o && ld -m elf_i386 --oformat binary -Ttext 0x7c00 boot/bootsector.o -o boot/bootsector.bin")
+    # Assemble complete bare-metal interactive OS kernel (Sector 1 MBR + Sector 2+ Kernel)
+    run_cmd("as --32 boot/boot_kernel.s -o boot/boot_kernel.o && ld -m elf_i386 --oformat binary -Ttext 0x7c00 boot/boot_kernel.o -o boot/bootsector.bin")
     
     # Compile Stage 2 protected mode loader
     run_cmd("gcc -m32 -c -ffreestanding -fno-pie -fno-stack-protector -nostdlib boot/stage2.c -o boot/stage2.o && ld -m elf_i386 --oformat binary -Ttext 0x8000 boot/stage2.o -o boot/stage2.bin")
@@ -161,8 +161,8 @@ Instructions:
     readme_bytes = readme_text.encode('utf-8')
     iso.add_fp(io.BytesIO(readme_bytes), len(readme_bytes), '/NOVAOS/README.TXT;1', rr_name='README.txt', joliet_path='/novaos/README.txt')
 
-    # Configure El Torito boot: BIOS No-Emulation with bootsector.bin (load size 4 sectors = 2048 bytes)
-    iso.add_eltorito('/BOOT/BOOT.BIN;1', boot_load_size=4, media_name='noemul')
+    # Configure El Torito boot: BIOS No-Emulation with bootsector.bin (load size 32 sectors = 16 KB)
+    iso.add_eltorito('/BOOT/BOOT.BIN;1', boot_load_size=32, media_name='noemul')
 
     # Write out final ISO
     iso.write(ISO_PATH)

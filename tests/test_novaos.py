@@ -26,14 +26,14 @@ from installer.deploy import NovaDeployer
 class TestNovaOS(unittest.TestCase):
 
     def test_bootloader_mbr_signature(self):
-        """Verify MBR Stage 1 boot sector is exactly 512 bytes with 0xAA55 signature."""
+        """Verify MBR Stage 1 boot sector has valid 0xAA55 signature at offset 510."""
         mbr_path = os.path.join(REPO_ROOT, "boot", "bootsector.bin")
         self.assertTrue(os.path.exists(mbr_path), "bootsector.bin must exist")
         size = os.path.getsize(mbr_path)
-        self.assertEqual(size, 512, f"MBR bootsector must be 512 bytes, got {size}")
+        self.assertGreaterEqual(size, 512, f"MBR bootloader must be at least 512 bytes, got {size}")
         with open(mbr_path, "rb") as f:
             data = f.read()
-            self.assertEqual(data[-2:], b"\x55\xaa", "Missing 0xAA55 boot signature")
+            self.assertEqual(data[510:512], b"\x55\xaa", "Missing 0xAA55 boot signature at offset 510")
 
     def test_uefi_pe_binary(self):
         """Verify BOOTX64.EFI is a valid PE32+ executable."""
