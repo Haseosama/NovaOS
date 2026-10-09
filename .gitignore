@@ -16,8 +16,8 @@ __pycache__/
 
 # Node / Vite temporary files (if any)
 node_modules/
-dist/*.iso
 
-# Keep SHA256SUMS and dist directory structure
+# Keep dist directory and artifacts (ISO image, SHA256SUMS)
+!dist/NovaOS-v1.0-x86_64-LiveCD.iso
 !dist/SHA256SUMS
 !dist/.gitkeep
