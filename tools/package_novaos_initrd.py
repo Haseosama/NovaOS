@@ -18,9 +18,12 @@ BOOT_DIR = os.path.join(REPO_ROOT, "boot")
 LIVECD_DIR = os.path.join(BOOT_DIR, "livecd")
 
 def package_initrd():
-    print("[*] Compiling NovaOS Windows 11 Desktop Engine...")
-    subprocess.run(["gcc", "-O2", os.path.join(BOOT_DIR, "novaos-desktop.c"), "-o", os.path.join(BOOT_DIR, "novaos-desktop")], check=True)
-    subprocess.run(["gcc", "-O2", f"-I{BOOT_DIR}", os.path.join(BOOT_DIR, "novaos-gui.c"), "-o", os.path.join(BOOT_DIR, "novaos-gui"), "-lm"], check=True)
+    print("[*] Compiling NovaOS Windows 11 Desktop Engine (Static ELF x86_64)...")
+    subprocess.run(["gcc", "-static", "-O2", os.path.join(BOOT_DIR, "novaos-desktop.c"), "-o", os.path.join(BOOT_DIR, "novaos-desktop")], check=True)
+    subprocess.run(["strip", "-s", os.path.join(BOOT_DIR, "novaos-desktop")], check=True)
+
+    subprocess.run(["gcc", "-static", "-O2", f"-I{BOOT_DIR}", os.path.join(BOOT_DIR, "novaos-gui.c"), "-o", os.path.join(BOOT_DIR, "novaos-gui"), "-lm"], check=True)
+    subprocess.run(["strip", "-s", os.path.join(BOOT_DIR, "novaos-gui")], check=True)
 
     with open(os.path.join(BOOT_DIR, "novaos-desktop"), "rb") as f:
         desktop_bytes = f.read()
@@ -28,27 +31,51 @@ def package_initrd():
     with open(os.path.join(BOOT_DIR, "novaos-gui"), "rb") as f:
         gui_bytes = f.read()
 
+    launcher_script = """#!/bin/sh
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
+export TERM=linux
+if [ -e /dev/fb0 ] && [ -x /bin/novaos-gui ]; then
+    /bin/novaos-gui "$@" 2>/dev/null || /bin/novaos-desktop "$@"
+else
+    /bin/novaos-desktop "$@"
+fi
+"""
+
     autostart_script = """#!/bin/sh
 # Auto-start NovaOS Windows 11 Desktop on login
 if [ -z "$NOVAOS_STARTED" ]; then
     export NOVAOS_STARTED=1
-    exec /bin/novaos-desktop
+    exec /bin/novaos
 fi
+"""
+
+    autologin_script = """#!/bin/busybox ash
+exec login -f tc
+"""
+
+    shadow_content = """root::13525:0:99999:7:::
+lp:*:13510:0:99999:7:::
+nobody:*:13509:0:99999:7:::
+tc::13646:0:99999:7:::
 """
 
     overlay_files = {
         "bin/novaos-desktop": desktop_bytes,
-        "bin/novaos": desktop_bytes,
         "bin/novaos-gui": gui_bytes,
+        "bin/novaos": launcher_script,
+        "usr/bin/novaos": launcher_script,
+        "sbin/autologin": autologin_script,
+        "etc/shadow": shadow_content,
         "etc/profile.d/novaos.sh": autostart_script,
         "home/tc/.profile": autostart_script,
         "opt/bootlocal.sh": """#!/bin/sh
-# Start NovaOS Desktop in background if needed
-/bin/novaos-desktop </dev/tty1 >/dev/tty1 2>&1 &
+# Auto-launch NovaOS Windows 11 environment
+/bin/novaos </dev/tty1 >/dev/tty1 2>&1 &
 """,
         "etc/issue": """
    NovaOS Hyperion 2026 - Windows 11 Secure Edition (x86_64)
-   Zero-Trust Security Core Active
+   Login: tc (No password - Press Enter) | Root: root (No password)
+   Type 'novaos' to launch Windows 11 Neo Desktop
 """,
         "etc/os-release": """NAME="NovaOS"
 VERSION="1.0 Hyperion 2026 (Windows 11 Neo)"
