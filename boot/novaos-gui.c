@@ -396,18 +396,30 @@ void execute_command(const char *cmd) {
 }
 
 int main(int argc, char **argv) {
+    /* If --test requested, check if fb0 is available and writable */
+    if (argc > 1 && strcmp(argv[1], "--test") == 0) {
+        int test_fd = open("/dev/fb0", O_RDWR);
+        if (test_fd < 0) return 1;
+        close(test_fd);
+        return 0;
+    }
+
     /* Open framebuffer */
     fb_fd = open("/dev/fb0", O_RDWR);
     if (fb_fd < 0) {
-        /* If no /dev/fb0, simulate or exit */
-        fprintf(stderr, "[NovaOS GUI] Notice: /dev/fb0 not found, running simulated mode.\n");
-    } else {
-        struct fb_var_screeninfo vinfo;
-        if (ioctl(fb_fd, FBIOGET_VSCREENINFO, &vinfo) == 0) {
-            screen_width = vinfo.xres;
-            screen_height = vinfo.yres;
-        }
-        fb_ptr = (uint32_t *)mmap(0, screen_width * screen_height * 4, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
+        /* No hardware framebuffer available, return error so desktop fallback takes over immediately */
+        return 1;
+    }
+
+    struct fb_var_screeninfo vinfo;
+    if (ioctl(fb_fd, FBIOGET_VSCREENINFO, &vinfo) == 0) {
+        screen_width = vinfo.xres;
+        screen_height = vinfo.yres;
+    }
+    fb_ptr = (uint32_t *)mmap(0, screen_width * screen_height * 4, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
+    if (!fb_ptr || fb_ptr == MAP_FAILED) {
+        close(fb_fd);
+        return 1;
     }
 
     /* Open mouse device */

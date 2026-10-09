@@ -34,7 +34,7 @@ def package_initrd():
     launcher_script = """#!/bin/sh
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
 export TERM=linux
-if [ -e /dev/fb0 ] && [ -x /bin/novaos-gui ]; then
+if [ -c /dev/fb0 ] && /bin/novaos-gui --test 2>/dev/null; then
     /bin/novaos-gui "$@" 2>/dev/null || /bin/novaos-desktop "$@"
 else
     /bin/novaos-desktop "$@"
@@ -69,8 +69,8 @@ tc::13646:0:99999:7:::
         "etc/profile.d/novaos.sh": autostart_script,
         "home/tc/.profile": autostart_script,
         "opt/bootlocal.sh": """#!/bin/sh
-# Auto-launch NovaOS Windows 11 environment
-/bin/novaos </dev/tty1 >/dev/tty1 2>&1 &
+# NovaOS boot initialization
+dmesg -n 1
 """,
         "etc/issue": """
    NovaOS Hyperion 2026 - Windows 11 Secure Edition (x86_64)
