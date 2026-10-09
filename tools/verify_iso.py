@@ -29,10 +29,11 @@ def verify_iso():
 
     # 2. Check Core Bootloader & Linux Kernel Files
     expected_files = [
-        "/BOOT/ISOLINUX.BIN;1",
+        "/ISOLINUX/ISOLINUX.BIN;1",
+        "/ISOLINUX/ISOLINUX.CFG;1",
+        "/ISOLINUX.CFG;1",
         "/BOOT/ISOLINUX.CFG;1",
-        "/BOOT/VESAMENU.C32;1",
-        "/BOOT/VMLINUZ6.BIN;1",
+        "/BOOT/VMLINUZ;1",
         "/BOOT/INITRD.GZ;1",
         "/BOOT/EFIBOOT.IMG;1",
         "/EFI/BOOT/BOOTX64.EFI;1",

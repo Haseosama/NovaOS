@@ -28,8 +28,6 @@ class TestNovaOS(unittest.TestCase):
     def test_bootloader_mbr_signature(self):
         """Verify bootloader binary is valid and exists."""
         loader_path = os.path.join(REPO_ROOT, "boot", "livecd", "isolinux.bin")
-        if not os.path.exists(loader_path):
-            loader_path = os.path.join(REPO_ROOT, "boot", "bootsector.bin")
         self.assertTrue(os.path.exists(loader_path), "Bootloader must exist")
         size = os.path.getsize(loader_path)
         self.assertGreaterEqual(size, 512, f"Bootloader must be at least 512 bytes, got {size}")

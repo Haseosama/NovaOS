@@ -19,6 +19,7 @@ import subprocess
 import pycdlib
 from tools.make_initramfs import build_initramfs
 from tools.make_efiboot import create_fat12_efi_image
+
 BOOT_DIR = os.path.join(REPO_ROOT, "boot")
 LIVECD_DIR = os.path.join(BOOT_DIR, "livecd")
 DIST_DIR = os.path.join(REPO_ROOT, "dist")
@@ -74,14 +75,6 @@ VERSION="1.0 Hyperion 2026 (Windows 11 Neo)"
 ID=novaos
 PRETTY_NAME="NovaOS Hyperion 2026 Edition"
 SECURITY_PROFILE="ZERO_TRUST_MILITARY_GRADE"
-""",
-        "etc/novaos-security.conf": """# NovaOS Security Configuration
-ENFORCE_KASLR=1
-PAGE_ALLOC_SHUFFLE=1
-INIT_ON_ALLOC=1
-INIT_ON_FREE=1
-TPM_MEASURED_BOOT=1
-BITLOCKER_NEO_ENCRYPTION=AES-256-XTS
 """
     }
 
@@ -109,43 +102,51 @@ def create_iso():
     iso = pycdlib.PyCdlib()
     iso.new(interchange_level=3, joliet=3, rock_ridge='1.09', vol_ident="NOVAOS")
 
-    # Add /BOOT directory
+    # 1. Add /ISOLINUX directory (Standard for ISOLINUX bootloader)
+    iso.add_directory('/ISOLINUX', rr_name='isolinux', joliet_path='/isolinux')
+    iso.add_file(os.path.join(LIVECD_DIR, 'isolinux.bin'), '/ISOLINUX/ISOLINUX.BIN;1', rr_name='isolinux.bin', joliet_path='/isolinux/isolinux.bin')
+    iso.add_file(os.path.join(LIVECD_DIR, 'isolinux.cfg'), '/ISOLINUX/ISOLINUX.CFG;1', rr_name='isolinux.cfg', joliet_path='/isolinux/isolinux.cfg')
+    iso.add_file(os.path.join(LIVECD_DIR, 'vesamenu.c32'), '/ISOLINUX/VESAMENU.C32;1', rr_name='vesamenu.c32', joliet_path='/isolinux/vesamenu.c32')
+    iso.add_file(os.path.join(LIVECD_DIR, 'libutil.c32'), '/ISOLINUX/LIBUTIL.C32;1', rr_name='libutil.c32', joliet_path='/isolinux/libutil.c32')
+    iso.add_file(os.path.join(LIVECD_DIR, 'libcom32.c32'), '/ISOLINUX/LIBCOM32.C32;1', rr_name='libcom32.c32', joliet_path='/isolinux/libcom32.c32')
+
+    # Also add isolinux.cfg at root / for maximum compatibility
+    iso.add_file(os.path.join(LIVECD_DIR, 'isolinux.cfg'), '/ISOLINUX.CFG;1', rr_name='isolinux.cfg', joliet_path='/isolinux.cfg')
+
+    # 2. Add /BOOT directory
     iso.add_directory('/BOOT', rr_name='boot', joliet_path='/boot')
-
-    # Add ISOLINUX bootloader & helpers
-    iso.add_file(os.path.join(LIVECD_DIR, 'isolinux.bin'), '/BOOT/ISOLINUX.BIN;1', rr_name='isolinux.bin', joliet_path='/boot/isolinux.bin')
+    iso.add_directory('/BOOT/ISOLINUX', rr_name='isolinux', joliet_path='/boot/isolinux')
     iso.add_file(os.path.join(LIVECD_DIR, 'isolinux.cfg'), '/BOOT/ISOLINUX.CFG;1', rr_name='isolinux.cfg', joliet_path='/boot/isolinux.cfg')
-    iso.add_file(os.path.join(LIVECD_DIR, 'vesamenu.c32'), '/BOOT/VESAMENU.C32;1', rr_name='vesamenu.c32', joliet_path='/boot/vesamenu.c32')
-    iso.add_file(os.path.join(LIVECD_DIR, 'libutil.c32'), '/BOOT/LIBUTIL.C32;1', rr_name='libutil.c32', joliet_path='/boot/libutil.c32')
-    iso.add_file(os.path.join(LIVECD_DIR, 'libcom32.c32'), '/BOOT/LIBCOM32.C32;1', rr_name='libcom32.c32', joliet_path='/boot/libcom32.c32')
+    iso.add_file(os.path.join(LIVECD_DIR, 'isolinux.cfg'), '/BOOT/ISOLINUX/ISOLINUX.CFG;1', rr_name='isolinux.cfg', joliet_path='/boot/isolinux/isolinux.cfg')
 
-    # Add Linux Kernel (vmlinuz64) & Initrd (initrd.gz)
-    iso.add_file(os.path.join(LIVECD_DIR, 'vmlinuz64'), '/BOOT/VMLINUZ6.BIN;1', rr_name='vmlinuz64', joliet_path='/boot/vmlinuz64')
+    # Add Linux Kernel as /BOOT/VMLINUZ (strict 8.3 name!)
+    iso.add_file(os.path.join(LIVECD_DIR, 'vmlinuz64'), '/BOOT/VMLINUZ;1', rr_name='vmlinuz', joliet_path='/boot/vmlinuz')
+    # Add Initrd as /BOOT/INITRD.GZ
     iso.add_file(os.path.join(LIVECD_DIR, 'initrd.gz'), '/BOOT/INITRD.GZ;1', rr_name='initrd.gz', joliet_path='/boot/initrd.gz')
 
     # Add EFI Boot Image
     iso.add_file(os.path.join(BOOT_DIR, 'efiboot.img'), '/BOOT/EFIBOOT.IMG;1', rr_name='efiboot.img', joliet_path='/boot/efiboot.img')
 
-    # Add /EFI/BOOT directory
+    # 3. Add /EFI/BOOT directory for UEFI systems
     iso.add_directory('/EFI', rr_name='efi', joliet_path='/efi')
     iso.add_directory('/EFI/BOOT', rr_name='boot', joliet_path='/efi/boot')
     iso.add_file(os.path.join(BOOT_DIR, 'BOOTX64.EFI'), '/EFI/BOOT/BOOTX64.EFI;1', rr_name='bootx64.efi', joliet_path='/efi/boot/bootx64.efi')
 
-    # Add /NOVAOS payload metadata
+    # 4. Add /NOVAOS payload metadata
     iso.add_directory('/NOVAOS', rr_name='novaos', joliet_path='/novaos')
     manifest_data = {
         "os_name": "NovaOS",
         "edition": "Hyperion 2026 - Windows 11 Neo Edition",
         "version": "1.0.0",
-        "kernel": "Linux 64-bit Hardened Core",
+        "kernel": "Linux 64-bit Hardened Core (vmlinuz)",
         "gui": "NovaGUI Windows 11 Desktop (1024x768 32-bit Framebuffer)",
         "security": "Zero-Trust, LUKS2 AES-256, TPM 2.0"
     }
     manifest_bytes = json.dumps(manifest_data, indent=2).encode('utf-8')
     iso.add_fp(io.BytesIO(manifest_bytes), len(manifest_bytes), '/NOVAOS/MANIFEST.JSO;1', rr_name='manifest.json', joliet_path='/novaos/manifest.json')
 
-    # Configure El Torito boot: ISOLINUX with boot_info_table=True
-    iso.add_eltorito('/BOOT/ISOLINUX.BIN;1', boot_info_table=True, media_name='noemul')
+    # Configure El Torito boot: ISOLINUX at /ISOLINUX/ISOLINUX.BIN;1 with boot_info_table=True
+    iso.add_eltorito('/ISOLINUX/ISOLINUX.BIN;1', boot_info_table=True, media_name='noemul')
 
     iso.write(ISO_PATH)
     iso.close()
@@ -176,7 +177,7 @@ def summarize():
     print(f" NovaOS Linux Live CD ISO: {ISO_PATH}")
     print(f" File Size: {sz_mb} MB ({os.path.getsize(ISO_PATH)} bytes)")
     print(f" Bootloader: ISOLINUX (BIOS) + UEFI GOP (64-bit)")
-    print(f" Kernel: 64-bit Linux bzImage (vmlinuz64)")
+    print(f" Kernel: 64-bit Linux bzImage (/boot/vmlinuz)")
     print(f" GUI Desktop: Windows 11 Neo 1024x768 32-bit Framebuffer")
     print(f" Security Profile: Hardened, Zero-Trust, LUKS2 AES-256")
     print("=" * 60)
