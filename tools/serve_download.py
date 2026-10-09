@@ -708,7 +708,7 @@ class DownloadHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(content)))
             self.end_headers()
             self.wfile.write(content)
-        elif parsed.path.endswith(".iso") or parsed.path == "/download/NovaOS-v1.0-x86_64-LiveCD.iso":
+        elif parsed.path.endswith(".iso") or parsed.path in ("/download", "/iso", "/download/NovaOS-v1.0-x86_64-LiveCD.iso"):
             if not os.path.exists(ISO_PATH):
                 self.send_error(404, "ISO file not found")
                 return
