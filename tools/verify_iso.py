@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 NovaOS ISO Verification & Diagnostic Suite
-Validates El Torito boot structures, volume descriptors, and internal cryptographic files.
+Validates El Torito boot structures, ISOLINUX, kernel, and GUI desktop files.
 """
 
 import sys
@@ -12,7 +12,7 @@ REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 ISO_PATH = os.path.join(REPO_ROOT, "dist", "NovaOS-v1.0-x86_64-LiveCD.iso")
 
 def verify_iso():
-    print(f"[*] Verifying NovaOS Live CD ISO: {ISO_PATH}")
+    print(f"[*] Verifying NovaOS Linux Live CD ISO: {ISO_PATH}")
     if not os.path.exists(ISO_PATH):
         print(f"[FAIL] ISO does not exist at {ISO_PATH}")
         sys.exit(1)
@@ -27,18 +27,16 @@ def verify_iso():
         sys.exit(1)
     print("    [PASS] El Torito Boot Catalog present.")
 
-    # 2. Check Directories and Core Files
+    # 2. Check Core Bootloader & Linux Kernel Files
     expected_files = [
-        "/BOOT/BOOT.BIN;1",
-        "/BOOT/STAGE2.BIN;1",
-        "/BOOT/VMLINUZ.BIN;1",
-        "/BOOT/INITRD.IMG;1",
-        "/BOOT/GRUB.CFG;1",
+        "/BOOT/ISOLINUX.BIN;1",
         "/BOOT/ISOLINUX.CFG;1",
+        "/BOOT/VESAMENU.C32;1",
+        "/BOOT/VMLINUZ6.BIN;1",
+        "/BOOT/INITRD.GZ;1",
         "/BOOT/EFIBOOT.IMG;1",
         "/EFI/BOOT/BOOTX64.EFI;1",
         "/NOVAOS/MANIFEST.JSO;1",
-        "/NOVAOS/README.TXT;1",
     ]
 
     print("[*] Checking ISO directory structure and files...")
@@ -51,7 +49,7 @@ def verify_iso():
             sys.exit(1)
 
     iso.close()
-    print("[SUCCESS] NovaOS Live CD ISO verified and fully compliant with BIOS & UEFI El Torito standards!")
+    print("[SUCCESS] NovaOS Linux Live CD ISO verified and fully compliant with BIOS & UEFI standards!")
 
 if __name__ == "__main__":
     verify_iso()

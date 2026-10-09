@@ -361,7 +361,7 @@ HTML_PAGE = """<!DOCTYPE html>
             <span class="brand-badge">Windows 11 Secure Neo Edition</span>
         </div>
         <a class="btn-download-top" href="/download/NovaOS-v1.0-x86_64-LiveCD.iso" download="NovaOS-v1.0-x86_64-LiveCD.iso">
-            ⬇️ Télécharger l'ISO (3.0 Mo)
+            ⬇️ Télécharger l'ISO Linux Live CD (17.6 Mo)
         </a>
     </header>
 
