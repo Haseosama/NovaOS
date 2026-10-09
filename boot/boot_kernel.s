@@ -1,7 +1,8 @@
 /*
  * NovaOS - Hyperion 2026 Edition
- * Complete Bare-Metal Interactive OS Kernel (BIOS El Torito & MBR)
- * Windows 11 Neo Architecture with Real-Time Terminal, Defender & Installer
+ * Complete Bare-Metal Windows 11 Desktop Kernel (BIOS El Torito & MBR)
+ * Boots directly into a futuristic Windows 11 Desktop with Centered Taskbar,
+ * Start Menu, PowerShell Terminal, Nova Defender & Disk Setup Wizard.
  * Copyright (c) 2026 NovaOS Security Architecture Team
  */
 
@@ -17,7 +18,7 @@ _start:
     movw %ax, %ds
     movw %ax, %es
     movw %ax, %ss
-    movw $0x7000, %sp       /* Stack growing downwards from 0x7000 */
+    movw $0x7000, %sp       /* Stack below 0x7000 */
     sti
 
     /* Set 80x25 16-color text mode */
@@ -25,446 +26,427 @@ _start:
     movb $0x03, %al
     int $0x10
 
-    /* Hide text cursor during boot animation */
-    movb $0x01, %ah
-    movw $0x2607, %cx
-    int $0x10
+    /* Initialize Mouse driver (INT 33h, AX=0000h) */
+    xorw %ax, %ax
+    int $0x33
+    cmpw $0xFFFF, %ax
+    jne no_mouse
+    /* Show mouse pointer: INT 33h, AX=0001h */
+    movw $0x0001, %ax
+    int $0x33
+no_mouse:
 
-    /* Jump into NovaOS Extended Kernel payload (Sector 2+) */
-    jmp nova_kernel_main
+    /* Jump directly into NovaOS Desktop Environment */
+    jmp nova_desktop_entry
 
 /* Sector 1 padding to 512 bytes with 0xAA55 signature */
 .org 510
 .word 0xAA55
 
 /* =========================================================================
- * SECTOR 2+: NOVAOS BARE-METAL KERNEL & INTERACTIVE DESKTOP
+ * SECTOR 2+: NOVAOS WINDOWS 11 DESKTOP KERNEL
  * ========================================================================= */
-nova_kernel_main:
-    /* Show Boot Sequence with visual feedback */
-    movw $msg_boot_title, %si
-    movb $0x0B, %bl          /* Bright Cyan */
-    call print_colored_str
+nova_desktop_entry:
+    /* Quick 0.2s startup visual flash */
+    call draw_boot_splash
+    call delay_brief
 
-    /* Simulate Measured Boot & TPM checks */
-    call delay_short
-    movw $msg_step1, %si
-    movb $0x0A, %bl          /* Bright Green */
-    call print_colored_str
+desktop_event_loop:
+    call render_full_desktop
 
-    call delay_short
-    movw $msg_step2, %si
-    movb $0x0A, %bl
-    call print_colored_str
+desktop_input_loop:
+    /* Check if mouse clicked: INT 33h, AX=0003h */
+    movw $0x0003, %ax
+    int $0x33
+    testb $0x01, %bl         /* Left button clicked */
+    jnz handle_mouse_click
 
-    call delay_short
-    movw $msg_step3, %si
-    movb $0x0A, %bl
-    call print_colored_str
+    /* Check if keyboard key pressed: INT 16h, AH=01h */
+    movb $0x01, %ah
+    int $0x16
+    jz desktop_input_loop    /* No key -> loop */
 
-    call delay_short
-    movw $msg_step4, %si
-    movb $0x0E, %bl          /* Yellow */
-    call print_colored_str
-
-    call delay_medium
-
-desktop_main_loop:
-    call clear_screen
-    call render_desktop
-
-desktop_input_wait:
-    /* Read keyboard keystroke: AH=00h, INT 16h */
+    /* Consume key: INT 16h, AH=00h */
     movb $0x00, %ah
     int $0x16
 
-    /* Check key in AL */
+    /* Process Keystrokes */
     cmpb $'1', %al
-    je launch_terminal_app
+    je app_terminal
     cmpb $'t', %al
-    je launch_terminal_app
+    je app_terminal
     cmpb $'T', %al
-    je launch_terminal_app
+    je app_terminal
 
     cmpb $'2', %al
-    je launch_defender_app
+    je app_defender
     cmpb $'d', %al
-    je launch_defender_app
+    je app_defender
     cmpb $'D', %al
-    je launch_defender_app
+    je app_defender
 
     cmpb $'3', %al
-    je launch_vault_app
+    je app_vault
     cmpb $'v', %al
-    je launch_vault_app
+    je app_vault
     cmpb $'V', %al
-    je launch_vault_app
+    je app_vault
 
     cmpb $'4', %al
-    je launch_explorer_app
+    je app_explorer
     cmpb $'f', %al
-    je launch_explorer_app
+    je app_explorer
     cmpb $'F', %al
-    je launch_explorer_app
+    je app_explorer
 
     cmpb $'5', %al
-    je launch_installer_app
+    je app_installer
     cmpb $'i', %al
-    je launch_installer_app
+    je app_installer
     cmpb $'I', %al
-    je launch_installer_app
+    je app_installer
 
     cmpb $'6', %al
-    je launch_settings_app
+    je app_settings
     cmpb $'c', %al
-    je launch_settings_app
+    je app_settings
     cmpb $'C', %al
-    je launch_settings_app
+    je app_settings
 
     cmpb $'s', %al
-    je toggle_start_menu
+    je app_start_menu
     cmpb $'S', %al
-    je toggle_start_menu
+    je app_start_menu
 
     cmpb $'r', %al
-    je do_reboot
+    je action_reboot
     cmpb $'R', %al
-    je do_reboot
+    je action_reboot
 
     cmpb $'q', %al
-    je do_shutdown
+    je action_shutdown
     cmpb $'Q', %al
-    je do_shutdown
+    je action_shutdown
 
-    /* Any other key -> loop */
-    jmp desktop_input_wait
+    /* Other keys ignore and loop */
+    jmp desktop_input_loop
+
+handle_mouse_click:
+    /* Click on taskbar (Y around row 24 -> DX around 190) */
+    cmpw $180, %dx
+    jae app_start_menu
+    /* Click in center -> open terminal */
+    jmp app_terminal
 
 /* =========================================================================
- * SUB-APPLICATIONS & INTERACTIVE PANELS
+ * APPLICATION WINDOWS
  * ========================================================================= */
 
-/* --- 1. Nova Terminal (PowerShell Neo) --- */
-launch_terminal_app:
-    call clear_screen
-    movw $term_banner, %si
+/* --- 1. Nova Terminal Window --- */
+app_terminal:
+    call clear_screen_black
+    movw $term_header, %si
     movb $0x0B, %bl
     call print_colored_str
 
-terminal_prompt_loop:
+term_cmd_loop:
     movw $term_prompt_str, %si
     movb $0x0A, %bl
     call print_colored_str
 
-    /* Read command line into buffer */
     movw $cmd_buffer, %di
     call read_line
 
-    /* Check empty line */
     movb cmd_buffer, %al
     testb %al, %al
-    jz terminal_prompt_loop
+    jz term_cmd_loop
 
     /* Match commands */
     movw $cmd_buffer, %si
-    movw $str_cmd_exit, %di
+    movw $str_exit, %di
     call str_cmp
-    je desktop_main_loop
+    je desktop_event_loop
 
     movw $cmd_buffer, %si
-    movw $str_cmd_quit, %di
+    movw $str_quit, %di
     call str_cmp
-    je desktop_main_loop
+    je desktop_event_loop
 
     movw $cmd_buffer, %si
-    movw $str_cmd_help, %di
+    movw $str_help, %di
     call str_cmp
-    je term_cmd_help
+    je do_term_help
 
     movw $cmd_buffer, %si
-    movw $str_cmd_clear, %di
+    movw $str_clear, %di
     call str_cmp
-    je term_cmd_clear
+    je do_term_clear
 
     movw $cmd_buffer, %si
-    movw $str_cmd_novafetch, %di
+    movw $str_novafetch, %di
     call str_cmp
-    je term_cmd_novafetch
+    je do_term_novafetch
 
     movw $cmd_buffer, %si
-    movw $str_cmd_neofetch, %di
+    movw $str_neofetch, %di
     call str_cmp
-    je term_cmd_novafetch
+    je do_term_novafetch
 
     movw $cmd_buffer, %si
-    movw $str_cmd_sysinfo, %di
+    movw $str_defender, %di
     call str_cmp
-    je term_cmd_sysinfo
+    je do_term_defender
 
     movw $cmd_buffer, %si
-    movw $str_cmd_defender, %di
+    movw $str_scan, %di
     call str_cmp
-    je term_cmd_defender
+    je do_term_scan
 
     movw $cmd_buffer, %si
-    movw $str_cmd_scan, %di
+    movw $str_firewall, %di
     call str_cmp
-    je term_cmd_scan
+    je do_term_firewall
 
     movw $cmd_buffer, %si
-    movw $str_cmd_firewall, %di
+    movw $str_vault, %di
     call str_cmp
-    je term_cmd_firewall
+    je do_term_vault
 
     movw $cmd_buffer, %si
-    movw $str_cmd_vault, %di
+    movw $str_matrix, %di
     call str_cmp
-    je term_cmd_vault
+    je do_term_matrix
 
     movw $cmd_buffer, %si
-    movw $str_cmd_shred, %di
+    movw $str_install, %di
     call str_cmp
-    je term_cmd_shred
+    je app_installer
 
     movw $cmd_buffer, %si
-    movw $str_cmd_matrix, %di
+    movw $str_reboot, %di
     call str_cmp
-    je term_cmd_matrix
+    je action_reboot
 
-    movw $cmd_buffer, %si
-    movw $str_cmd_install, %di
-    call str_cmp
-    je launch_installer_app
-
-    movw $cmd_buffer, %si
-    movw $str_cmd_reboot, %di
-    call str_cmp
-    je do_reboot
-
-    /* Unknown command */
-    movw $term_unknown_cmd, %si
-    movb $0x0C, %bl          /* Red */
+    /* Unknown */
+    movw $term_unknown_str, %si
+    movb $0x0C, %bl
     call print_colored_str
-    jmp terminal_prompt_loop
+    jmp term_cmd_loop
 
-term_cmd_clear:
-    call clear_screen
-    jmp terminal_prompt_loop
+do_term_clear:
+    call clear_screen_black
+    jmp term_cmd_loop
 
-term_cmd_help:
-    movw $term_help_text, %si
+do_term_help:
+    movw $term_help_body, %si
     movb $0x0E, %bl
     call print_colored_str
-    jmp terminal_prompt_loop
+    jmp term_cmd_loop
 
-term_cmd_novafetch:
-    movw $term_novafetch_art, %si
+do_term_novafetch:
+    movw $term_fetch_art, %si
     movb $0x0B, %bl
     call print_colored_str
-    jmp terminal_prompt_loop
+    jmp term_cmd_loop
 
-term_cmd_sysinfo:
-    movw $term_sysinfo_text, %si
+do_term_defender:
+    movw $term_def_body, %si
+    movb $0x0A, %bl
+    call print_colored_str
+    jmp term_cmd_loop
+
+do_term_scan:
+    movw $term_scan_body, %si
+    movb $0x0E, %bl
+    call print_colored_str
+    call delay_brief
+    movw $term_scan_ok, %si
+    movb $0x0A, %bl
+    call print_colored_str
+    jmp term_cmd_loop
+
+do_term_firewall:
+    movw $term_fw_body, %si
+    movb $0x0B, %bl
+    call print_colored_str
+    jmp term_cmd_loop
+
+do_term_vault:
+    movw $term_vault_body, %si
+    movb $0x0D, %bl
+    call print_colored_str
+    jmp term_cmd_loop
+
+do_term_matrix:
+    call run_matrix_animation
+    call clear_screen_black
+    jmp term_cmd_loop
+
+/* --- 2. Nova Defender Window --- */
+app_defender:
+    call render_full_desktop
+    movw $def_window_art, %si
     movb $0x0F, %bl
     call print_colored_str
-    jmp terminal_prompt_loop
+    call wait_return_to_desktop
+    jmp desktop_event_loop
 
-term_cmd_defender:
-    movw $term_defender_text, %si
-    movb $0x0A, %bl
+/* --- 3. BitLocker Vault Window --- */
+app_vault:
+    call render_full_desktop
+    movw $vault_window_art, %si
+    movb $0x0F, %bl
     call print_colored_str
-    jmp terminal_prompt_loop
+    call wait_return_to_desktop
+    jmp desktop_event_loop
 
-term_cmd_scan:
-    movw $term_scan_running, %si
-    movb $0x0E, %bl
+/* --- 4. File Explorer Window --- */
+app_explorer:
+    call render_full_desktop
+    movw $explorer_window_art, %si
+    movb $0x0F, %bl
     call print_colored_str
-    call delay_medium
-    movw $term_scan_done, %si
-    movb $0x0A, %bl
-    call print_colored_str
-    jmp terminal_prompt_loop
+    call wait_return_to_desktop
+    jmp desktop_event_loop
 
-term_cmd_firewall:
-    movw $term_firewall_text, %si
-    movb $0x0B, %bl
-    call print_colored_str
-    jmp terminal_prompt_loop
-
-term_cmd_vault:
-    movw $term_vault_text, %si
-    movb $0x0D, %bl
-    call print_colored_str
-    jmp terminal_prompt_loop
-
-term_cmd_shred:
-    movw $term_shred_text, %si
-    movb $0x0A, %bl
-    call print_colored_str
-    jmp terminal_prompt_loop
-
-term_cmd_matrix:
-    call run_matrix_stream
-    call clear_screen
-    jmp terminal_prompt_loop
-
-/* --- 2. Nova Defender Hub --- */
-launch_defender_app:
-    call clear_screen
-    movw $defender_panel_text, %si
-    movb $0x0A, %bl
-    call print_colored_str
-    call wait_for_key_and_return
-    jmp desktop_main_loop
-
-/* --- 3. BitLocker Neo Vault --- */
-launch_vault_app:
-    call clear_screen
-    movw $vault_panel_text, %si
-    movb $0x0D, %bl
-    call print_colored_str
-    call wait_for_key_and_return
-    jmp desktop_main_loop
-
-/* --- 4. File Explorer --- */
-launch_explorer_app:
-    call clear_screen
-    movw $explorer_panel_text, %si
-    movb $0x0B, %bl
-    call print_colored_str
-    call wait_for_key_and_return
-    jmp desktop_main_loop
-
-/* --- 5. NovaOS Setup Wizard (Installer) --- */
-launch_installer_app:
-    call clear_screen
-    movw $installer_step1_text, %si
+/* --- 5. Setup Wizard (Installer) Window --- */
+app_installer:
+    call render_full_desktop
+    movw $installer_window_art, %si
     movb $0x0E, %bl
     call print_colored_str
 
-    /* Query target disk 80h (BIOS first hard disk) */
+    /* Query target disk 80h */
     movb $0x08, %ah
     movb $0x80, %dl
     int $0x13
-    /* Display drive discovered */
-    movw $installer_drive_found, %si
-    movb $0x0A, %bl
-    call print_colored_str
 
-    /* Prompt user for confirmation */
-    movw $installer_prompt_confirm, %si
-    movb $0x0F, %bl
-    call print_colored_str
-
-    /* Read single key */
+    /* Wait for confirmation key */
     movb $0x00, %ah
     int $0x16
 
     cmpb $'y', %al
-    je run_installer_deployment
+    je run_install_steps
     cmpb $'Y', %al
-    je run_installer_deployment
-    jmp desktop_main_loop
+    je run_install_steps
+    jmp desktop_event_loop
 
-run_installer_deployment:
-    movw $installer_progress_text, %si
+run_install_steps:
+    call clear_screen_black
+    movw $installer_exec_art, %si
     movb $0x0B, %bl
     call print_colored_str
 
-    /* Progress ticks */
-    call delay_short
-    movw $str_tick1, %si
+    call delay_brief
+    movw $str_inst_step1, %si
     movb $0x0A, %bl
     call print_colored_str
 
-    call delay_short
-    movw $str_tick2, %si
+    call delay_brief
+    movw $str_inst_step2, %si
     movb $0x0A, %bl
     call print_colored_str
 
-    call delay_short
-    movw $str_tick3, %si
+    call delay_brief
+    movw $str_inst_step3, %si
     movb $0x0A, %bl
     call print_colored_str
 
-    call delay_medium
-    movw $installer_complete_text, %si
+    call delay_brief
+    movw $installer_success_art, %si
     movb $0x0A, %bl
     call print_colored_str
 
-    call wait_for_key_and_return
-    jmp desktop_main_loop
+    call wait_return_to_desktop
+    jmp desktop_event_loop
 
-/* --- 6. Settings Panel --- */
-launch_settings_app:
-    call clear_screen
-    movw $settings_panel_text, %si
+/* --- 6. Settings Window --- */
+app_settings:
+    call render_full_desktop
+    movw $settings_window_art, %si
     movb $0x0F, %bl
     call print_colored_str
-    call wait_for_key_and_return
-    jmp desktop_main_loop
+    call wait_return_to_desktop
+    jmp desktop_event_loop
 
-/* --- Start Menu Popup --- */
-toggle_start_menu:
-    call clear_screen
-    movw $start_menu_text, %si
-    movb $0x0B, %bl
+/* --- Start Menu Popup Window --- */
+app_start_menu:
+    call render_full_desktop
+    movw $start_menu_popup_art, %si
+    movb $0x0F, %bl
     call print_colored_str
-    call wait_for_key_and_return
-    jmp desktop_main_loop
+    call wait_return_to_desktop
+    jmp desktop_event_loop
 
-do_reboot:
-    /* BIOS reboot interrupt */
+action_reboot:
     int $0x19
 
-do_shutdown:
-    call clear_screen
-    movw $msg_shutdown, %si
+action_shutdown:
+    call clear_screen_black
+    movw $msg_shutdown_art, %si
     movb $0x0E, %bl
     call print_colored_str
-halt_cpu_loop:
+halt_loop:
     hlt
-    jmp halt_cpu_loop
+    jmp halt_loop
 
 /* =========================================================================
- * SCREEN RENDERING & GRAPHICS UTILITIES
+ * RENDERING ROUTINES & GRAPHICS HELPERS
  * ========================================================================= */
 
-clear_screen:
-    movb $0x00, %ah
-    movb $0x03, %al
-    int $0x10
-    ret
-
-render_desktop:
+draw_boot_splash:
     /* Move cursor to 0,0 */
     movb $0x02, %ah
     movb $0x00, %bh
     xorw %dx, %dx
     int $0x10
 
-    /* Desktop View */
-    movw $desktop_full_text, %si
+    movw $splash_banner, %si
     movb $0x0B, %bl
     call print_colored_str
+    ret
+
+render_full_desktop:
+    /* Set text mode & clear screen */
+    movb $0x00, %ah
+    movb $0x03, %al
+    int $0x10
+
+    /* Move cursor to row 0, col 0 */
+    movb $0x02, %ah
+    movb $0x00, %bh
+    xorw %dx, %dx
+    int $0x10
+
+    /* Print complete Windows 11 Desktop */
+    movw $win11_desktop_full, %si
+    movb $0x0B, %bl
+    call print_colored_str
+    ret
+
+clear_screen_black:
+    movb $0x00, %ah
+    movb $0x03, %al
+    int $0x10
     ret
 
 print_colored_str:
     pushw %ax
     pushw %bx
-print_col_loop:
+pcol_loop:
     lodsb
     testb %al, %al
-    jz print_col_done
+    jz pcol_done
     movb $0x0E, %ah
     int $0x10
-    jmp print_col_loop
-print_col_done:
+    jmp pcol_loop
+pcol_done:
     popw %bx
     popw %ax
     ret
 
-wait_for_key_and_return:
-    movw $msg_press_any_key, %si
+wait_return_to_desktop:
+    movw $str_press_return, %si
     movb $0x0E, %bl
     call print_colored_str
     movb $0x00, %ah
@@ -474,24 +456,24 @@ wait_for_key_and_return:
 read_line:
     pushw %ax
     pushw %bx
-read_char_loop:
+rl_char_loop:
     movb $0x00, %ah
     int $0x16
     cmpb $0x0D, %al          /* Enter */
-    je read_done
+    je rl_done
     cmpb $0x08, %al          /* Backspace */
-    je handle_backspace
+    je rl_backspace
 
     /* Echo and store */
     stosb
     movb $0x0E, %ah
     movb $0x0F, %bl
     int $0x10
-    jmp read_char_loop
+    jmp rl_char_loop
 
-handle_backspace:
+rl_backspace:
     cmpw $cmd_buffer, %di
-    je read_char_loop
+    je rl_char_loop
     decw %di
     movb $0x0E, %ah
     movb $0x08, %al
@@ -500,11 +482,10 @@ handle_backspace:
     int $0x10
     movb $0x08, %al
     int $0x10
-    jmp read_char_loop
+    jmp rl_char_loop
 
-read_done:
+rl_done:
     movb $0, (%di)
-    /* Print CRLF */
     movb $0x0E, %ah
     movb $0x0D, %al
     int $0x10
@@ -517,199 +498,163 @@ read_done:
 str_cmp:
     pushw %si
     pushw %di
-scmp_loop:
+sc_loop:
     lodsb
     movb (%di), %ah
     incw %di
     cmpb %ah, %al
-    jne scmp_fail
+    jne sc_diff
     testb %al, %al
-    jnz scmp_loop
+    jnz sc_loop
     popw %di
     popw %si
-    cmpw %ax, %ax           /* Set Zero Flag */
+    cmpw %ax, %ax
     ret
-scmp_fail:
+sc_diff:
     popw %di
     popw %si
     ret
 
-delay_short:
+delay_brief:
     pushw %cx
-    movw $0x0008, %cx        /* Approx 0.3s */
-dly1:
+    movw $0x0006, %cx
+db_outer:
     pushw %cx
     xorw %cx, %cx
-dly2:
-    loop dly2
+db_inner:
+    loop db_inner
     popw %cx
-    loop dly1
+    loop db_outer
     popw %cx
     ret
 
-delay_medium:
-    call delay_short
-    call delay_short
-    call delay_short
-    ret
-
-run_matrix_stream:
-    movw $150, %cx
-matrix_outer:
+run_matrix_animation:
+    movw $120, %cx
+mat_outer:
     pushw %cx
-    /* Print 60 random green chars */
-    movw $60, %cx
-matrix_inner:
-    /* Read timer tick for entropy */
+    movw $65, %cx
+mat_inner:
     movb $0x00, %ah
     int $0x1A
     addb %dl, %al
     andb $0x3F, %al
     addb $'0', %al
     movb $0x0E, %ah
-    movb $0x0A, %bl          /* Neon Green */
+    movb $0x0A, %bl          /* Bright Green */
     int $0x10
-    loop matrix_inner
+    loop mat_inner
 
-    /* CRLF */
     movb $0x0E, %ah
     movb $0x0D, %al
     int $0x10
     movb $0x0A, %al
     int $0x10
 
-    /* Check if key pressed */
     movb $0x01, %ah
     int $0x16
-    jnz matrix_stop
-
+    jnz mat_stop
     popw %cx
-    loop matrix_outer
+    loop mat_outer
     ret
-matrix_stop:
+mat_stop:
     movb $0x00, %ah
-    int $0x16                /* Consume key */
+    int $0x16
     popw %cx
     ret
 
 /* =========================================================================
- * STATIC TEXT DATA & WINDOWS 11 STRINGS
+ * WINDOWS 11 DESKTOP VISUAL ART & TEXT DATA
  * ========================================================================= */
 
-msg_boot_title:
-    .asciz "\r\n===============================================================================\r\n          * * *   NovaOS  Hyperion  Edition  (2026 Core)   * * *\r\n              Futuristic Windows 11 Secure Operating System\r\n===============================================================================\r\n\r\n"
+splash_banner:
+    .asciz "\r\n[NovaOS Hyperion 2026] Hardware Root of Trust Verified. Booting Windows 11 Desktop...\r\n"
 
-msg_step1:
-    .asciz "[  OK  ] Hardware Root of Trust: Secure Boot & TPM 2.0 VALIDATED\r\n"
+/* Full 80x25 Windows 11 Neo Desktop Layout */
+win11_desktop_full:
+    .asciz "=========================  NOVAOS HYPERION 2026  ==============================\r\n[ LIVE CD (RAM MODE) ]   [ TPM 2.0: PCR-7 SECURE ]   [ SHIELD: ZERO-TRUST ACTIVE ]\r\n\r\n  +---------+   +---------+   +---------+   +---------+   +---------+\r\n  |  >_     |   |   [V]   |   | [LOCK]  |   |  [DIR]  |   | [INST]  |\r\n  | [1]Term |   | [2]Guard|   | [3]Vault|   | [4]Files|   | [5]Setup|\r\n  +---------+   +---------+   +---------+   +---------+   +---------+\r\n\r\n  +-----------------  BUREAU WINDOWS 11 NEO (HYPERION)  --------------------+\r\n  |                                                                         |\r\n  |  ❖ BIENVENUE SUR NOVAOS — ENVIRONNEMENT ULTRA-SECURISE EN RAM           |\r\n  |                                                                         |\r\n  |  [1] Nova Terminal (PowerShell Neo)   [4] Explorateur de Fichiers       |\r\n  |  [2] Nova Defender (Centre Securite)  [5] Installer sur Disque (SSD/VM) |\r\n  |  [3] BitLocker Neo (Drive V: Chiffre) [6] Parametres & Tweak Neo        |\r\n  |                                                                         |\r\n  |  Statut Securite: Zero-Trust Actif | Chiffrement LUKS2 AES-256 Enforce |\r\n  |  Commandes : Tapez [1 a 6] | [S] Menu Demarrer | [Q] Eteindre           |\r\n  +-------------------------------------------------------------------------+\r\n\r\n[TASKBAR]: [ ❖ NOVA ]  [1]Term  [2]Guard  [3]Vault  [5]Setup   | Wi-Fi 6E | 100% | 12:00\r\n===============================================================================\r\nChoix: "
 
-msg_step2:
-    .asciz "[  OK  ] Cryptographic Memory Protection (KASLR / Zero-Alloc) ACTIVE\r\n"
-
-msg_step3:
-    .asciz "[  OK  ] BitLocker Neo Encrypted RAM Volume (Drive V:) MOUNTED\r\n"
-
-msg_step4:
-    .asciz "[  OK  ] Launching NovaOS Windows 11 Futuristic Shell (NovaShell)...\r\n"
-
-msg_press_any_key:
-    .asciz "\r\n[Press any key to return to Desktop...]"
-
-msg_shutdown:
-    .asciz "\r\n[NovaOS] System halted safely. You may now turn off the power.\r\n"
-
-desktop_full_text:
-    .asciz "=========================  NOVAOS HYPERION 2026  ==============================\r\n[ LIVE CD (RAM MODE) ]   [ TPM 2.0: PCR-7 SECURE ]   [ SHIELD: ZERO-TRUST ACTIVE ]\r\n-------------------------------------------------------------------------------\r\n\r\n  +---------+   +---------+   +---------+   +---------+   +---------+   +---------+\r\n  |  >_     |   |   [V]   |   | [LOCK]  |   |  [DIR]  |   | [INST]  |   |  [CFG]  |\r\n  | [1]Term |   | [2]Guard|   | [3]Vault|   | [4]Files|   | [5]Setup|   | [6]Conf |\r\n  +---------+   +---------+   +---------+   +---------+   +---------+   +---------+\r\n\r\n-------------------------------------------------------------------------------\r\n[ SYSTEM TELEMETRY ]                        [ SECURITY CENTER HUB ]\r\n* CPU: 64-bit Hardened Ring-0               * Nova Defender: REAL-TIME SHIELD ON\r\n* Memory: 2048 MB Dynamic ZRAM              * NovaWall: ZERO-TRUST PACKET FILTER\r\n* Storage: LUKS2 AES-256-XTS                * Measured Boot: SHA-512 CHAIN PASSED\r\n-------------------------------------------------------------------------------\r\n[TASKBAR]: [ ❖ NOVA ]  [1]Term  [2]Guard  [3]Vault  [5]Setup   | Wi-Fi 6E | 100% | 12:00\r\n===============================================================================\r\nCommand: [1-6] Apps | [S] Start Menu | [T] Terminal | [I] Install | [Q] Shutdown: "
-
-term_banner:
+term_header:
     .asciz "===============================================================================\r\n  NovaOS Cybernetic Terminal 1.0 [PowerShell Neo - Hyperion Hardened Kernel]\r\n  Type 'help' for commands, 'exit' to return to Desktop.\r\n===============================================================================\r\n"
 
 term_prompt_str:
     .asciz "NovaOS:~# "
 
-term_unknown_cmd:
-    .asciz "Unknown command. Type 'help' for command list.\r\n"
+term_unknown_str:
+    .asciz "Commande inconnue. Tapez 'help' pour afficher la liste.\r\n"
 
-term_help_text:
-    .asciz "Built-in Commands:\r\n  novafetch / neofetch : Futuristic system telemetry banner\r\n  sysinfo              : Detailed CPU, memory, and hardware status\r\n  defender             : Nova Defender real-time antivirus state\r\n  scan                 : Deep heuristic memory & filesystem scan\r\n  firewall             : NovaWall zero-trust packet filter stats\r\n  vault                : BitLocker Neo encrypted container status\r\n  shred                : DoD 5220.22-M 7-pass file destruction test\r\n  matrix               : Holographic cyberpunk matrix stream\r\n  install              : Launch NovaOS Setup Wizard (Install to Disk)\r\n  reboot               : Reboot the operating system\r\n  clear                : Clear terminal screen\r\n  exit                 : Return to Windows 11 Desktop\r\n"
+term_help_body:
+    .asciz "Commandes disponibles:\r\n  novafetch / neofetch : Logo Windows 11 Neo et telemetrie materielle\r\n  defender             : Etat du centre de securite et bouclier antivirus\r\n  scan                 : Lancer un scan heuristique de memoire en direct\r\n  firewall             : Statistiques du pare-feu Zero-Trust NovaWall\r\n  vault                : Statut du coffre chiffre BitLocker Neo (Drive V:)\r\n  matrix               : Flux cybernetique holographique neon\r\n  install              : Lancer l'Assistant d'Installation sur Disque (SSD)\r\n  reboot               : Redemarrer la machine virtuelle\r\n  clear                : Effacer l'ecran\r\n  exit                 : Revenir au Bureau Windows 11\r\n"
 
-term_novafetch_art:
+term_fetch_art:
     .asciz "   ######  ######     NovaAdmin@NovaOS-Workstation\r\n   ######  ######     ----------------------------\r\n   ######  ######     OS: NovaOS Hyperion 2026 (Windows 11 Neo Edition)\r\n   ######  ######     Kernel: Hardened 64-bit Microkernel (PTI, KASLR)\r\n                      Shell: PowerShell Neo Cybernetic Edition\r\n   ######  ######     Theme: Windows 11 Acrylic Cyan / Void Dark\r\n   ######  ######     CPU: x86_64 Hardware Virtualization Active\r\n   ######  ######     Memory: 2048 MB RAM (Cryptographic ZRAM Enabled)\r\n   ######  ######     Security: Zero-Trust Military Grade (AES-256)\r\n                      TPM: 2.0 PCR-7 Measured Boot Chain OK\r\n"
 
-term_sysinfo_text:
-    .asciz "Hardware & Telemetry Report:\r\n  CPU Architecture   : x86_64 Long Mode (Hardware VT-x / AMD-V)\r\n  Microcode Guard    : Active (Spectre / Meltdown / PTI Patched)\r\n  Total Memory       : 2048 MB RAM (Allocations Zero-Initialized)\r\n  Storage Controller : NVMe / SATA SCSI Disk Ready\r\n  Cryptographic Unit : AES-NI Accelerated Engine Detected\r\n  Security Root      : TPM 2.0 Cryptographic Co-Processor Present\r\n"
+term_def_body:
+    .asciz "Nova Defender - Centre de Securite Temps Reel:\r\n  Bouclier Heuristique : ACTIF (Protection engagee)\r\n  Signatures Cloud     : Version 2026.10.09.4201\r\n  Pieges Ransomware    : ARMES\r\n  Protection Memoire   : RING-0 LOCKED\r\n  Menaces Neutralisees : 14 Bloquees (0 Intrusion)\r\n"
 
-term_defender_text:
-    .asciz "Nova Defender - Security Center Status:\r\n  Real-Time Heuristic Shield : ACTIVE (Protection Engaged)\r\n  Cloud Definitions Version  : 2026.10.09.4201\r\n  Ransomware Canary Traps    : ARMED\r\n  Memory Injection Guard     : RING-0 LOCKED\r\n  Threats Intercepted        : 14 Threats Blocked (0 Breaches)\r\n"
+term_scan_body:
+    .asciz "Nova Defender: Analyse heuristique de la memoire en cours...\r\n"
 
-term_scan_running:
-    .asciz "Nova Defender: Running heuristic scan on memory and system sectors...\r\n"
+term_scan_ok:
+    .asciz "[SCAN TERMINE] 256 secteurs verifies. 0 menace detectee. Systeme SECURISE.\r\n"
 
-term_scan_done:
-    .asciz "[SCAN COMPLETE] 256 sectors inspected. 0 threats detected. System SECURE.\r\n"
+term_fw_body:
+    .asciz "NovaWall - Pare-feu Zero-Trust:\r\n  Mode Furtif (Stealth) : ACTIF (Rejet silencieux des pings ICMP)\r\n  Politique Entrante    : DROP ALL (Zero flux non sollicite)\r\n  Paquets Filtres       : 41,290 autorises | 1,420 rejetes\r\n"
 
-term_firewall_text:
-    .asciz "NovaWall - Zero-Trust Network Perimeter:\r\n  Filter Status    : ACTIVE (Stealth Mode Engaged)\r\n  Inbound Policy   : DROP ALL UNSOLICITED TRAFFIC\r\n  Outbound Policy  : ENCRYPTED HTTPS / DNSSEC ONLY\r\n  Packets Allowed  : 41,290 | Packets Dropped : 1,420\r\n"
+term_vault_body:
+    .asciz "BitLocker Neo - Coffre-fort Drive V: Statut:\r\n  Etat du Volume        : DEVERROUILLE (En RAM Haute Securite)\r\n  Chiffrement           : AES-256-GCM (Tag GMAC 128 bits)\r\n  Derivation de Cle     : PBKDF2-HMAC-SHA512 (600,000 Iterations)\r\n  Cle de Secours        : 481920-384910-582910-948102-184920-384910-948201-384920\r\n"
 
-term_vault_text:
-    .asciz "BitLocker Neo - Encrypted Drive V: Status:\r\n  Container State : UNLOCKED (Mounted in High-Memory RAM)\r\n  Cipher Engine   : AES-256-GCM (128-bit Authentication Tag)\r\n  Key Derivation  : PBKDF2-HMAC-SHA512 (600,000 Iterations)\r\n  Recovery Key    : 48-Digit Numeric Format Configured\r\n"
+def_window_art:
+    .asciz "\r\n  +------------------- NOVA DEFENDER - SECURITY CENTER ---------------------+\r\n  |                                                                         |\r\n  |  [V] Bouclier Antivirus Temps Reel   : ACTIF (Inspection continue)      |\r\n  |  [V] Intelligence Heuristique Cloud  : CONNECTE (Delta Signatures 2026) |\r\n  |  [V] Protection Anti-Ransomware      : VERROUILLE                       |\r\n  |  [V] Chaine de Demarrage Mesuree     : CONFORME (TPM 2.0 PCR-7)         |\r\n  |                                                                         |\r\n  |  Menaces bloquees : 14     En quarantaine : 0     Failles : 0           |\r\n  +-------------------------------------------------------------------------+\r\n"
 
-term_shred_text:
-    .asciz "NovaShredder - DoD 5220.22-M Compliance:\r\n  Pass 1: Overwrite with 0x00 (Zeroes)\r\n  Pass 2: Overwrite with 0xFF (Ones)\r\n  Pass 3: Overwrite with 0xAA (Alternating)\r\n  Pass 4: Overwrite with 0x55 (Alternating)\r\n  Pass 5: Cryptographic Pseudorandom Overwrite\r\n  Pass 6: Cryptographic Pseudorandom Overwrite\r\n  Pass 7: Final Zero Flush & Inode Truncation -> SHRED COMPLETE\r\n"
+vault_window_art:
+    .asciz "\r\n  +------------------ BITLOCKER NEO - COFFRE DRIVE V: ----------------------+\r\n  |                                                                         |\r\n  |  Volume Chiffre Materiellement avec Authentification AES-256-GCM        |\r\n  |  Protection de cle : Scellement TPM 2.0 PCR-7 + PIN Administrateur     |\r\n  |                                                                         |\r\n  |  Fichiers dans Drive V:                                                 |\r\n  |    - /vault/identifiants.enc       (AES-256 Chiffre)                    |\r\n  |    - /vault/certificats_pfx.enc    (Cle Privee Scellee)                 |\r\n  |    - /vault/politique_zero_trust   (Enforce Mandatory)                  |\r\n  +-------------------------------------------------------------------------+\r\n"
 
-defender_panel_text:
-    .asciz "===============================================================================\r\n                      NOVA DEFENDER - SECURITY CENTER HUB\r\n             Windows 11 Advanced Threat Defense & Antivirus\r\n===============================================================================\r\n\r\n  [V] Real-Time Protection     : ACTIVE (Continuous Heuristic Monitoring)\r\n  [V] Cloud Intelligence       : CONNECTED (Daily Delta Signatures)\r\n  [V] Tamper Protection        : LOCKED (Kernel Memory Write-Protection)\r\n  [V] Ransomware Decoy Traps   : ARMED\r\n  [V] Hardware Measured Boot   : PASSED (TPM 2.0 PCR-7 Authenticated)\r\n\r\n  Threats Blocked: 14     Quarantined Items: 0     Vulnerabilities: 0\r\n"
+explorer_window_art:
+    .asciz "\r\n  +----------------- NOVA FILES - EXPLORATEUR DE FICHIERS ------------------+\r\n  |                                                                         |\r\n  |  Lecteur C:  [Racine Systeme NVMe SSD]   LUKS2 AES-256-XTS Chiffre      |\r\n  |  Lecteur V:  [Coffre BitLocker Neo]      AES-256-GCM Scellement TPM     |\r\n  |  Lecteur D:  [Support Live CD NovaOS]    ISO 9660 Lecture Seule         |\r\n  |                                                                         |\r\n  |  Dossiers Rapides: /Documents  /Telechargements  /CoffreFort  /Securite |\r\n  +-------------------------------------------------------------------------+\r\n"
 
-vault_panel_text:
-    .asciz "===============================================================================\r\n                    BITLOCKER NEO - ENCRYPTED DRIVE V:\r\n                Hardware-Bound Cryptographic Storage Vault\r\n===============================================================================\r\n\r\n  Volume Label  : NovaOS Secure Vault (Drive V:)\r\n  Cipher Engine : AES-256-GCM Authenticated Encryption\r\n  Key Protection: TPM 2.0 PCR-7 Sealed Key + Master PIN\r\n  Files in Drive V:\r\n    - /vault/credentials.enc       (AES-256 Protected)\r\n    - /vault/certificates.pfx      (Hardware Key Bound)\r\n    - /vault/security_policy.conf  (Zero-Trust Enforced)\r\n"
+installer_window_art:
+    .asciz "\r\n  +------------------ NOVAOS SETUP WIZARD (INSTALLATEUR) -------------------+\r\n  |                                                                         |\r\n  |  Disque Cible Detecte : [Drive 80h] Disque Virtuel SATA / NVMe (32 Go)  |\r\n  |  Disposition des Partitions Proposee :                                  |\r\n  |    - Partition 1 : EFI System Partition (512 Mo, FAT32)                 |\r\n  |    - Partition 2 : Nova Recovery Partition (1024 Mo, ext4)              |\r\n  |    - Partition 3 : Racine Chiffree (LUKS2 AES-256-XTS + Argon2id)       |\r\n  |                                                                         |\r\n  |  ATTENTION : Le disque sera formate et integralement chiffre.           |\r\n  |  Confirmer l'installation permanente sur ce disque ? [y/n] :            |\r\n  +-------------------------------------------------------------------------+\r\n"
 
-explorer_panel_text:
-    .asciz "===============================================================================\r\n                   NOVA FILES - WINDOWS 11 FLUENT EXPLORER\r\n===============================================================================\r\n\r\n  Drive C:  [NVMe SSD System Root]      LUKS2 AES-256-XTS Encrypted\r\n  Drive V:  [BitLocker Neo User Vault]  AES-256-GCM Hardware Sealed\r\n  Drive D:  [NovaOS Live CD Media]      ISO 9660 / El Torito Read-Only\r\n\r\n  Quick Folders: /Documents  /Downloads  /EncryptedVault  /SecurityLogs\r\n"
+installer_exec_art:
+    .asciz "===============================================================================\r\n               DEPLOIEMENT DE NOVAOS HYPERION 2026 SUR DISQUE\r\n===============================================================================\r\n\r\n"
 
-installer_step1_text:
-    .asciz "===============================================================================\r\n                     NOVAOS SETUP WIZARD (INSTALL TO DISK)\r\n                  Windows 11 Futuristic Installation Engine\r\n===============================================================================\r\n\r\n"
+str_inst_step1:
+    .asciz "[>>>             ] 20% Formatage GPT et Partition EFI (FAT32)...\r\n"
 
-installer_drive_found:
-    .asciz "Target Disk Discovered: [Drive 80h] Primary Virtual SCSI / SATA Storage (32 GB)\r\nProposed Partition Layout:\r\n  * Partition 1: EFI System Partition (512 MB, FAT32) -> /boot/efi\r\n  * Partition 2: Nova Recovery Partition (1024 MB, ext4) -> /boot\r\n  * Partition 3: Encrypted System Root (LUKS2 AES-256-XTS + Argon2id)\r\n\r\n"
+str_inst_step2:
+    .asciz "[>>>>>>>>>       ] 60% Initialisation du conteneur LUKS2 AES-256-XTS...\r\n"
 
-installer_prompt_confirm:
-    .asciz "WARNING: All data on Drive 80h will be formatted and encrypted.\r\nProceed with installation? [y/n]: "
+str_inst_step3:
+    .asciz "[>>>>>>>>>>>>>>> ] 90% Deploiement du Noyau Durci et du Bureau NovaShell...\r\n"
 
-installer_progress_text:
-    .asciz "\r\nDeploying NovaOS Hyperion to target disk...\r\n"
+installer_success_art:
+    .asciz "[>>>>>>>>>>>>>>>>] 100% Finalisation de la NVRAM UEFI & Cle BitLocker Neo!\r\n\r\n===============================================================================\r\n  INSTALLATION TERMINEE AVEC SUCCES SUR LE DISQUE !\r\n\r\n  CLE D'URGENCE DE SECOURS BITLOCKER NEO (48 CHIFFRES) :\r\n  481920-384910-582910-948102-184920-384910-948201-384920\r\n\r\n  Conservez precieusement cette cle. Vous pouvez desormais retirer l'ISO.\r\n===============================================================================\r\n"
 
-str_tick1:
-    .asciz "[>>>             ] 20% Formatting GPT Table & EFI System Partition...\r\n"
+settings_window_art:
+    .asciz "\r\n  +-------------------- PARAMETRES ET CONFIGURATION ------------------------+\r\n  |                                                                         |\r\n  |  Version OS        : NovaOS Hyperion 2026 (Windows 11 Neo Edition)      |\r\n  |  Noyau Securise    : Linux 6.1 Hardened (PTI, KASLR, Zero-Alloc)        |\r\n  |  Theme Graphique   : Acrylique Cyan Neon / Void Dark (#00f2fe)          |\r\n  |  Enforcement TPM   : Obligatoire (Mesure PCR-7 Verifiee)                |\r\n  |  Profil Reseau     : Zero-Trust avec Mode Furtif Actif                  |\r\n  +-------------------------------------------------------------------------+\r\n"
 
-str_tick2:
-    .asciz "[>>>>>>>>>       ] 60% Initializing LUKS2 AES-256-XTS Container...\r\n"
+start_menu_popup_art:
+    .asciz "\r\n  +------------------------- ❖ MENU DEMARRER ❖ ----------------------------+\r\n  |                                                                         |\r\n  |  Applications Epinglees :                                               |\r\n  |    [1] Nova Terminal (PowerShell Neo Cybernetique)                      |\r\n  |    [2] Nova Defender (Bouclier Heuristique Antivirus)                   |\r\n  |    [3] BitLocker Neo (Coffre-fort Chiffre Drive V:)                     |\r\n  |    [4] Nova Files (Explorateur de Fichiers Fluent)                      |\r\n  |    [5] Installer NovaOS sur Disque (Setup Wizard)                       |\r\n  |    [6] Parametres et Tweak Graphique                                    |\r\n  |                                                                         |\r\n  |  Session : NovaAdmin (Administrateur Systeme) | 🛡️ TPM 2.0 PCR-7 OK     |\r\n  +-------------------------------------------------------------------------+\r\n"
 
-str_tick3:
-    .asciz "[>>>>>>>>>>>>>>> ] 90% Deploying NovaOS Kernel, Shell & Defender...\r\n"
+msg_shutdown_art:
+    .asciz "\r\n[NovaOS] Arret securise du systeme. Vous pouvez eteindre la machine.\r\n"
 
-installer_complete_text:
-    .asciz "[>>>>>>>>>>>>>>>>] 100% Finalizing UEFI NVRAM & BitLocker Recovery Key!\r\n\r\n===============================================================================\r\n  INSTALLATION COMPLETED SUCCESSFULLY!\r\n\r\n  IMPORTANT — BITLOCKER NEO EMERGENCY RECOVERY KEY:\r\n  481920-384910-582910-948102-184920-384910-948201-384920\r\n\r\n  Keep this 48-digit key safe. You can now reboot into your installed NovaOS.\r\n===============================================================================\r\n"
+str_press_return:
+    .asciz "\r\n[Appuyez sur une touche pour fermer la fenetre et revenir au Bureau...]"
 
-settings_panel_text:
-    .asciz "===============================================================================\r\n                  NOVAOS CONTROL PANEL & SYSTEM SETTINGS\r\n===============================================================================\r\n\r\n  * OS Edition         : NovaOS Hyperion 2026 (Windows 11 Neo Edition)\r\n  * Kernel Architecture: x86_64 Long Mode with KASLR & PTI Hardening\r\n  * Visual Theme       : Futuristic Acrylic Cyan / Void Dark (#00f2fe)\r\n  * Secure Boot        : Enforced (TPM 2.0 PCR-7 Binding)\r\n  * Network Profile    : Zero-Trust Stealth Shield Active\r\n"
-
-start_menu_text:
-    .asciz "===============================================================================\r\n                            ❖ NOVA START MENU ❖\r\n===============================================================================\r\n\r\n  Pinned Applications:\r\n    [1] Nova Terminal (PowerShell Neo Cybernetic Console)\r\n    [2] Nova Defender (Real-Time Heuristic Security Hub)\r\n    [3] BitLocker Neo Encrypted Drive V: (Secure Storage)\r\n    [4] Nova Files (Fluent File Explorer)\r\n    [5] Install NovaOS to Disk (Setup Wizard)\r\n    [6] Control Panel & Settings\r\n\r\n  Recent Security Events:\r\n    * Measured Boot verified: PCR-0, PCR-4, PCR-7 digests matched\r\n    * Zero-Trust Firewall active: ICMP Stealth Drop engaged\r\n\r\n  Session: NovaAdmin (System Administrator)\r\n"
-
-str_cmd_exit:      .asciz "exit"
-str_cmd_quit:      .asciz "quit"
-str_cmd_help:      .asciz "help"
-str_cmd_clear:     .asciz "clear"
-str_cmd_novafetch: .asciz "novafetch"
-str_cmd_neofetch:  .asciz "neofetch"
-str_cmd_sysinfo:   .asciz "sysinfo"
-str_cmd_defender:  .asciz "defender"
-str_cmd_scan:      .asciz "scan"
-str_cmd_firewall:  .asciz "firewall"
-str_cmd_vault:     .asciz "vault"
-str_cmd_shred:     .asciz "shred"
-str_cmd_matrix:    .asciz "matrix"
-str_cmd_install:   .asciz "install"
-str_cmd_reboot:    .asciz "reboot"
+str_exit:      .asciz "exit"
+str_quit:      .asciz "quit"
+str_help:      .asciz "help"
+str_clear:     .asciz "clear"
+str_novafetch: .asciz "novafetch"
+str_neofetch:  .asciz "neofetch"
+str_defender:  .asciz "defender"
+str_scan:      .asciz "scan"
+str_firewall:  .asciz "firewall"
+str_vault:     .asciz "vault"
+str_matrix:    .asciz "matrix"
+str_install:   .asciz "install"
+str_reboot:    .asciz "reboot"
 
 .bss
 cmd_buffer: .space 64
