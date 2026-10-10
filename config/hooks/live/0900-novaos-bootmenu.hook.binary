@@ -1,0 +1,101 @@
+#!/bin/bash
+#
+# NovaOS — hook live-build (étape binaire) : menu de démarrage de la clé
+#
+# Exécuté après la génération des menus isolinux (BIOS) et GRUB (UEFI), avant
+# la création de l'ISO : remplace l'image Debian (casque, « Debian GNU/Linux
+# 13 », versions) par l'écran NovaOS, traduit les entrées et met les couleurs
+# NovaOS. Tout est facultatif : si un fichier n'existe pas, on passe.
+#
+set -u
+
+# live-build lance les hooks binaires depuis la racine de build ou binary/
+[ -d binary ] && cd binary
+
+SRC=""
+for d in ../chroot/usr/share/novaos ../config/includes.chroot/usr/share/novaos chroot/usr/share/novaos config/includes.chroot/usr/share/novaos; do
+    if [ -f "$d/boot-splash-640x480.png" ]; then SRC="$d"; break; fi
+done
+if [ -z "$SRC" ]; then
+    echo "[novaos] AVERTISSEMENT : image du menu de démarrage introuvable" >&2
+    exit 0
+fi
+
+# --- Image de fond : chaque splash.png prend la version NovaOS à sa taille ---
+find . -name 'splash.png' -type f 2>/dev/null | while read -r f; do
+    # Largeur lue dans l'en-tête PNG (octets 16 à 19)
+    width="$(od -An -tu1 -j16 -N4 "$f" 2>/dev/null | awk '{print $1*16777216+$2*65536+$3*256+$4}')"
+    if [ "${width:-0}" -le 1024 ]; then
+        cp "$SRC/boot-splash-640x480.png" "$f"
+    else
+        cp "$SRC/boot-splash-1920x1080.png" "$f"
+    fi
+    echo "[novaos] menu de démarrage : $f remplacé"
+done
+# Variante SVG éventuelle : on la retire pour qu'elle ne soit pas réutilisée
+find . -name 'splash.svg' -type f -delete 2>/dev/null || true
+
+# --- Textes : en français et au nom de NovaOS ---
+CFGS="$(find . \( -path './isolinux/*' -o -path './syslinux/*' -o -path './boot/grub/*' \) \
+        \( -name '*.cfg' -o -name 'theme.txt' \) -type f 2>/dev/null)"
+for f in $CFGS; do
+    sed -i \
+        -e 's/Live system (\([^)]*\) fail-safe mode)/NovaOS Live (\1, mode sans échec)/g' \
+        -e 's/Live system (\([^)]*\))/NovaOS Live (\1)/g' \
+        -e 's/Live system/NovaOS Live/g' \
+        -e 's/fail-safe mode/mode sans échec/g' \
+        -e 's/Utilities/Utilitaires/g' \
+        -e 's/Boot menu/Menu de démarrage/g' \
+        -e 's/Hardware Detection Tool (HDT)/Détection du matériel (HDT)/g' \
+        -e 's/Memory Diagnostic Test (memtest86+)/Test de la mémoire (memtest86+)/g' \
+        -e 's/Memory Diagnostic Test/Test de la mémoire/g' \
+        -e 's/UEFI Firmware Settings/Réglages du firmware UEFI/g' \
+        -e 's/Debian GNU\/Linux/NovaOS/g' \
+        "$f"
+done
+
+# --- Couleurs isolinux (BIOS) : accent bleu NovaOS, texte clair ---
+for f in isolinux/stdmenu.cfg syslinux/stdmenu.cfg isolinux/menu.cfg syslinux/menu.cfg; do
+    [ -f "$f" ] || continue
+    if ! grep -q 'NovaOS couleurs' "$f"; then
+        cat >> "$f" <<'CFG'
+
+# NovaOS couleurs
+menu color title        * #ffeff0f1 #00000000 none
+menu color sel          * #ffffffff #e00078d4 none
+menu color unsel        * #ffc8d4e3 #00000000 none
+menu color hotsel       1;7;37;40 #ffffffff #e000b4ff none
+menu color tabmsg       * #ff7fd8ff #00000000 none
+menu color help         * #ffc8d4e3 #00000000 none
+menu color timeout_msg  * #ff7fd8ff #00000000 none
+menu color timeout      * #ffffffff #00000000 none
+menu color border       * #00000000 #00000000 none
+menu tabmsg Entrée : démarrer NovaOS   ·   Tab : modifier l'entrée
+CFG
+        echo "[novaos] menu de démarrage : couleurs NovaOS dans $f"
+    fi
+    break
+done
+
+# isolinux affiche en page de codes 437 : pas d'accents (GRUB, lui, gère l'UTF-8)
+find isolinux syslinux -name '*.cfg' -type f 2>/dev/null | while read -r f; do
+    sed -i -e 's/é/e/g; s/è/e/g; s/É/E/g; s/·/-/g' "$f"
+done
+
+# --- Couleurs GRUB (UEFI) ---
+find boot/grub -name 'theme.txt' -type f 2>/dev/null | while read -r t; do
+    sed -i \
+        -e 's/selected_item_color *= *"[^"]*"/selected_item_color = "#ffffff"/' \
+        -e 's/item_color *= *"[^"]*"/item_color = "#c8d4e3"/' \
+        -e 's/title-color *: *"[^"]*"/title-color: "#eff0f1"/' \
+        -e 's/title-text *: *"[^"]*"/title-text: ""/' \
+        "$t"
+    echo "[novaos] menu de démarrage : thème GRUB $t adapté"
+done
+for f in boot/grub/grub.cfg boot/grub/config.cfg; do
+    [ -f "$f" ] || continue
+    sed -i -e 's/set menu_color_highlight=.*/set menu_color_highlight=white\/blue/' "$f"
+done
+
+echo "[novaos] menu de démarrage NovaOS prêt"
+exit 0

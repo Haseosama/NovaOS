@@ -66,7 +66,7 @@ function novaCreatePanel() {
 }
 
 // Widgets du bureau (en haut à droite, style verre du thème NovaGlass) :
-// grande horloge, processeur, mémoire. Ajoutés seulement avec une barre neuve.
+// grande horloge, puis processeur et mémoire. Ajoutés seulement avec une barre neuve.
 function novaDesktopWidgets() {
     var ds = [];
     novaTry("bureaux", function () { ds = desktops(); });
@@ -84,8 +84,8 @@ function novaDesktopWidgets() {
         c.writeConfig("showDate", true);
         c.writeConfig("dateDisplayFormat", "BelowTime");
     });
-    novaTry("processeur", function () { d.addWidget("org.kde.plasma.systemmonitor.cpu", x, 210, w, 190); });
-    novaTry("mémoire", function () { d.addWidget("org.kde.plasma.systemmonitor.memory", x, 420, w, 190); });
+    // Widget NovaOS (processeur + mémoire) : ne dépend pas de ksystemstats
+    novaTry("système", function () { d.addWidget("org.novaos.sysmon", x, 210, w, 200); });
 }
 
 // Une barre existe déjà ? On n'y touche pas (l'utilisateur l'a peut-être

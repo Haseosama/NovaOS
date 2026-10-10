@@ -34,25 +34,20 @@ else
     echo "[novaos] AVERTISSEMENT : Kvantum Qt 6 indisponible, style Breeze conservé" >&2
 fi
 
-# --- Widgets processeur / mémoire du bureau ---
-# Les widgets « Moniteur système » ont besoin des faces graphiques de
-# libksysguard et du service ksystemstats, sinon ils restent vides.
-SYSMON_PKGS="ksystemstats plasma-systemmonitor"
-for p in $(apt-cache pkgnames 2>/dev/null | grep -E 'ksysguard|ksystemstats' | grep -v -E -- '-(dev|dbg|doc)$' | grep -v -i 'ksysguardd$'); do
-    SYSMON_PKGS="$SYSMON_PKGS $p"
-done
-for p in $SYSMON_PKGS; do
+# --- Widget « Système NovaOS » (processeur / mémoire) du bureau ---
+# Il lit /usr/local/bin/novaos-sysinfo via le moteur « executable » de
+# Plasma 5 Support : on s'assure que ce module QML est installé.
+for p in $(apt-cache pkgnames 2>/dev/null | grep -i 'plasma5support' | grep -v -E -- '-(dev|dbg|doc)$'); do
     apt-get install -y --no-install-recommends "$p" >/dev/null 2>&1 || true
 done
-if find /usr -path '*ksysguard*' -name 'org.kde.ksysguard.piechart*' 2>/dev/null | grep -q . \
-   || find /usr -path '*ksysguard/faces*' 2>/dev/null | grep -q .; then
-    echo "[novaos] widgets moniteur système : faces graphiques présentes"
+if find /usr/lib -name '*engine_executable*' 2>/dev/null | grep -q . \
+   && find /usr/lib -path '*qml/org/kde/plasma/plasma5support*' 2>/dev/null | grep -q .; then
+    echo "[novaos] widget Système NovaOS : moteur executable présent"
 else
-    echo "[novaos] AVERTISSEMENT : faces ksysguard introuvables : widgets processeur/mémoire retirés" >&2
-    sed -i '/org.kde.plasma.systemmonitor/d' /usr/share/novaos/novaos-panel.js \
+    echo "[novaos] AVERTISSEMENT : moteur executable de Plasma introuvable : widget Système retiré" >&2
+    sed -i '/org.novaos.sysmon/d' /usr/share/novaos/novaos-panel.js \
         /usr/share/plasma/look-and-feel/org.novaos.desktop/contents/layouts/org.kde.plasma.desktop-layout.js
 fi
-command -v ksystemstats >/dev/null 2>&1 && echo "[novaos] ksystemstats présent"
 
 # --- Applique la configuration bureau aux comptes existants (ex. user live) ---
 # Les comptes créés à l'installation l'obtiennent via /etc/skel.
