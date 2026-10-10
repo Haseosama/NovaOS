@@ -25,12 +25,24 @@ MPC_DESKTOP=""
 if apt_retry install -y mpc-qt >/dev/null 2>&1; then
     MPC_DESKTOP="$(grep -l -i -E '^Exec=.*mpc-qt' /usr/share/applications/*.desktop 2>/dev/null | head -n1)"
 else
+    # 1) API GitHub (peut être limitée depuis les machines de build partagées)
     url="$(curl -fsSL --retry 3 https://api.github.com/repos/mpc-qt/mpc-qt/releases/latest 2>/dev/null \
-        | grep -o '"browser_download_url": *"[^"]*x86_64[^"]*\.AppImage"' | head -n1 | sed 's/.*"\(https[^"]*\)"/\1/')"
+        | grep -o '"browser_download_url": *"[^"]*\.AppImage"' | grep -i -E 'x86_64|amd64' | head -n1 | sed 's/.*"\(https[^"]*\)"/\1/')"
+    # 2) sinon la page des versions de github.com (liste des fichiers)
+    if [ -z "$url" ]; then
+        tag="$(curl -fsSIL --retry 3 -o /dev/null -w '%{url_effective}' https://github.com/mpc-qt/mpc-qt/releases/latest 2>/dev/null | sed 's#.*/tag/##')"
+        echo "[novaos] mpc-qt : API GitHub indisponible, version trouvée par la page : ${tag:-aucune}"
+        if [ -n "$tag" ]; then
+            path="$(curl -fsSL --retry 3 "https://github.com/mpc-qt/mpc-qt/releases/expanded_assets/$tag" 2>/dev/null \
+                | grep -o 'href="[^"]*\.AppImage"' | grep -i -E 'x86_64|amd64' | head -n1 | sed 's/href="\([^"]*\)"/\1/')"
+            [ -n "$path" ] && url="https://github.com$path"
+        fi
+    fi
+    echo "[novaos] mpc-qt : AppImage = ${url:-introuvable}"
     if [ -n "$url" ] && curl -fsSL --retry 3 -o /tmp/mpc-qt.AppImage "$url"; then
         chmod +x /tmp/mpc-qt.AppImage
         rm -rf /opt/mpc-qt /tmp/squashfs-root
-        if (cd /tmp && ./mpc-qt.AppImage --appimage-extract >/dev/null 2>&1) && [ -x /tmp/squashfs-root/AppRun ]; then
+        if (cd /tmp && ./mpc-qt.AppImage --appimage-extract >/dev/null 2>/tmp/mpc-extract.log) && [ -x /tmp/squashfs-root/AppRun ]; then
             mv /tmp/squashfs-root /opt/mpc-qt
             chmod -R a+rX /opt/mpc-qt
             printf '#!/bin/sh\nexec /opt/mpc-qt/AppRun "$@"\n' > /usr/local/bin/mpc-qt
@@ -50,7 +62,8 @@ MimeType=video/mp4;video/x-matroska;video/webm;video/x-msvideo;video/avi;video/q
 DESK
             MPC_DESKTOP=/usr/share/applications/novaos-mpc-qt.desktop
         fi
-        rm -f /tmp/mpc-qt.AppImage; rm -rf /tmp/squashfs-root
+        [ -n "$MPC_DESKTOP" ] || echo "[novaos] mpc-qt : extraction de l'AppImage impossible : $(tail -n2 /tmp/mpc-extract.log 2>/dev/null)" >&2
+        rm -f /tmp/mpc-qt.AppImage /tmp/mpc-extract.log; rm -rf /tmp/squashfs-root
     fi
 fi
 if [ -n "$MPC_DESKTOP" ]; then
