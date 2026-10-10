@@ -1,0 +1,48 @@
+#!/bin/bash
+#
+# NovaOS — hook live-build : installateur Calamares + outils de build
+#
+set -e
+
+# --- Déploie notre configuration Calamares (écrase l'éventuelle config par défaut) ---
+# Le staging est déposé via includes.chroot dans /usr/share/novaos/calamares-staging/
+STAGING="/usr/share/novaos/calamares-staging"
+if [ -d "$STAGING" ]; then
+    mkdir -p /etc/calamares
+    cp -a "$STAGING"/. /etc/calamares/
+fi
+
+# --- Groupe « novaos-live » ---
+# L'utilisateur live y est ajouté au démarrage (voir /etc/live/config.conf.d/).
+# Groupe vide sur un système installé : il sert uniquement à la règle polkit
+# qui autorise l'icône « Installer NovaOS » à lancer Calamares sans mot de passe
+# dans la session live (voir /etc/polkit-1/rules.d/49-novaos-live-installer.rules).
+groupadd -f novaos-live 2>/dev/null || true
+
+# --- Calamares (au cas où live-build ne l'aurait pas déjà installé) ---
+if ! command -v calamares >/dev/null 2>&1; then
+    apt-get update -qq >/dev/null 2>&1 || true
+    DEBIAN_FRONTEND=noninteractive apt-get install -y calamares >/dev/null 2>&1 || true
+fi
+
+# --- GRUB : binaires nécessaires pour amorcer le système installé ---
+# (Calamares exécute grub-install dans la cible : les paquets GRUB doivent
+#  être présents dans le système live, recopié sur la cible.)
+if ! command -v grub-install >/dev/null 2>&1; then
+    printf '%s\n' \
+        "grub-pc grub-pc/install_devices multiselect" \
+        "grub-pc grub-pc/install_devices_empty boolean false" \
+        "grub-pc grub-pc/install_devices_failed boolean true" \
+        "grub-pc grub-pc/install_devices_disks_changed multiselect" \
+        | debconf-set-selections 2>/dev/null || true
+    apt-get update -qq >/dev/null 2>&1 || true
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        grub-pc grub-efi-amd64 grub-efi-amd64-bin grub2-common grub-common \
+        >/dev/null 2>&1 \
+    || DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        grub-efi-amd64 grub-efi-amd64-bin grub2-common grub-common \
+        >/dev/null 2>&1 \
+    || echo "[novaos] AVERTISSEMENT : GRUB n'a pas pu être installé (l'installation devra l'installer)."
+fi
+
+exit 0

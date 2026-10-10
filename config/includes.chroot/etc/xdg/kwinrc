@@ -1,0 +1,11 @@
+# NovaOS — KWin (compositage, flou « verre dépoli » façon Windows 11)
+
+[Compositing]
+Enabled=true
+
+[Effect-blur]
+Enabled=true
+
+[Plugins]
+blurEnabled=true
+kwin4_effect_blurEnabled=true

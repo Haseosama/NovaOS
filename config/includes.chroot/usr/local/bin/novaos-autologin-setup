@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# NovaOS — connexion automatique sur le bureau (SDDM)
+#
+# Écrit /etc/sddm.conf.d/99-novaos-autologin.conf pour l'utilisateur principal :
+#   • sur l'ISO live   : l'utilisateur « user » → bureau directement au boot
+#   • sur le système installé : le compte créé par Calamares
+#
+# Désactivation : passer NOVAOS_AUTOLOGIN à false dans /etc/novaos/autologin.conf
+#
+set -u
+
+CONF_DIR="/etc/sddm.conf.d"
+CONF_FILE="${CONF_DIR}/99-novaos-autologin.conf"
+TOGGLE="/etc/novaos/autologin.conf"
+
+[ -d "$CONF_DIR" ] || exit 0
+
+NOVAOS_AUTOLOGIN=true
+[ -r "$TOGGLE" ] && . "$TOGGLE"
+
+if [ "${NOVAOS_AUTOLOGIN}" != "true" ]; then
+    # Supprime notre configuration…
+    rm -f "$CONF_FILE"
+    # …et neutralise l'autologin écrit dans /etc/sddm.conf par live-config
+    # (session live) ou par Calamares (système installé) : chez SDDM, le
+    # fichier /etc/sddm.conf a la PRIORITÉ sur /etc/sddm.conf.d/.
+    if [ -f /etc/sddm.conf ]; then
+        sed -i '/^\[Autologin\]/,/^\[/{ /^User=/s/^/# /; }' /etc/sddm.conf
+    fi
+    exit 0
+fi
+
+# Utilisateur principal : premier compte humain (uid >= 1000) avec un shell valide
+primary_user="$(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 && $7 !~ /(nologin|false)$/ { print $1; exit }')"
+[ -n "$primary_user" ] || exit 0
+
+# Session Plasma (Wayland par défaut sur Plasma 6)
+session="plasma.desktop"
+
+cat > "$CONF_FILE" <<EOF
+# Généré par NovaOS — connexion automatique sur le bureau
+# Désactiver : NOVAOS_AUTOLOGIN=false dans /etc/novaos/autologin.conf
+[Autologin]
+User=${primary_user}
+Session=${session}
+Relogin=false
+EOF
+
+chmod 0644 "$CONF_FILE"
+exit 0

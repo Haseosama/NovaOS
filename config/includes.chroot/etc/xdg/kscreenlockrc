@@ -1,0 +1,10 @@
+# NovaOS — verrouillage de l'écran (sécurité)
+# 5 minutes d'inactivité, verrouillage au réveil de la mise en veille.
+
+[Daemon]
+Autolock=true
+LockOnResume=true
+
+[Greeter]
+Timeout=300
+LockGrace=0

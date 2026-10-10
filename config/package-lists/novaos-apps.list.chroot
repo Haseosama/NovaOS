@@ -1,0 +1,37 @@
+# NovaOS — applications
+
+# Navigateur & bureautique
+firefox-esr
+firefox-esr-l10n-fr
+libreoffice
+libreoffice-l10n-fr
+libreoffice-help-fr
+
+# Multimédia
+vlc
+
+# KDE : terminal, fichiers, images, PDF, capture d'écran
+konsole
+dolphin
+ark
+kate
+gwenview
+okular
+spectacle
+filelight
+
+# Correcteur orthographique français & pages de manuel
+hunspell-fr
+manpages-fr
+
+# --- Outils système ---
+git
+curl
+wget
+htop
+btop
+unzip
+smartmontools
+
+# Client SSH uniquement — aucun serveur (pas de surface d'attaque réseau)
+openssh-client

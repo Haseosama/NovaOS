@@ -1,0 +1,15 @@
+NAME="NovaOS"
+VERSION="2026.10 (Nova)"
+VERSION_ID="2026.10"
+VERSION_CODENAME=nova
+PRETTY_NAME="NovaOS 2026.10"
+ID=novaos
+ID_LIKE="debian"
+HOME_URL="https://github.com/Haseosama/NovaOS"
+DOCUMENTATION_URL="https://github.com/Haseosama/NovaOS/blob/main/README.md"
+SUPPORT_URL="https://github.com/Haseosama/NovaOS/discussions"
+BUG_REPORT_URL="https://github.com/Haseosama/NovaOS/issues"
+PRIVACY_POLICY_URL="https://github.com/Haseosama/NovaOS/blob/main/SECURITY.md"
+LOGO=novaos-logo
+VARIANT="Édition Futuriste"
+VARIANT_ID=novaos-futuriste

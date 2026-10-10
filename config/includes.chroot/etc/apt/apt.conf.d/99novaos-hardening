@@ -1,0 +1,5 @@
+// NovaOS — durcissement d'APT
+Acquire::AllowInsecureRepositories "false";
+Acquire::AllowDowngradeToInsecureRepositories "false";
+APT::Get::AllowUnauthenticated "false";
+APT::Get::AllowChangeHeldPackages "false";

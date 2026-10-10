@@ -1,0 +1,14 @@
+{
+    "KPlugin": {
+        "Id": "com.novaos.neon",
+        "Name": "NovaOS Neon",
+        "Name[fr]": "NovaOS Neon",
+        "Description": "Fond d'écran futuriste NovaOS — grille néon magenta et cyan",
+        "Description[fr]": "Fond d'écran futuriste NovaOS — grille néon magenta et cyan",
+        "Version": "1.0",
+        "License": "CC-BY-SA-4.0",
+        "EnabledByDefault": true
+    },
+    "X-Plasma-API": "Wallpaper",
+    "MimeType": "image/jpeg"
+}

@@ -1,0 +1,27 @@
+# NovaOS — thème par défaut (système, tous utilisateurs)
+# Look futuriste inspiré de Windows 11 : sombre, accent bleu #0078D4, simple clic.
+
+[General]
+ColorScheme=NovaOS-Dark
+Name=NovaOS Dark
+shadeSortColumn=true
+
+[Icons]
+Theme=Papirus-Dark
+
+[KDE]
+LookAndFeelPackage=org.kde.breezedark.desktop
+widgetStyle=Breeze
+# Windows 11 ouvre les dossiers d'un simple clic
+SingleClick=true
+
+[Mouse]
+cursorTheme=Breeze_Snow
+
+[WM]
+activeBackground=0,120,212,255
+activeBlend=0,120,212,255
+activeForeground=255,255,255,255
+inactiveBackground=49,54,59,255
+inactiveForeground=189,195,199,255
+inactiveBlend=239,240,241,255

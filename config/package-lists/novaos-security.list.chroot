@@ -1,0 +1,22 @@
+# NovaOS — sécurité
+
+# Groupe sudo (le compte créé à l'installation y est ajouté par Calamares)
+sudo
+
+# Pare-feu (activé par défaut par le hook 0130-security)
+ufw
+gufw
+
+# Mises à jour automatiques (sécurité + correctifs)
+unattended-upgrades
+
+# Confined applications (Mandatory Access Control)
+apparmor
+apparmor-profiles
+apparmor-utils
+
+# Politique de mots de passe
+libpam-pwquality
+
+# Splash de démarrage (thème « spinner » si disponible)
+plymouth

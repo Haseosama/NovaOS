@@ -1,0 +1,13 @@
+# NovaOS — pilotes & microcodes (dépôt non-free-firmware)
+# Nécessite --archive-areas "main contrib non-free non-free-firmware"
+
+firmware-linux
+firmware-misc-nonfree
+firmware-iwlwifi
+firmware-realtek
+firmware-atheros
+firmware-brcm80211
+
+# Microcodes CPU (correctifs de sécurité matériels)
+amd64-microcode
+intel-microcode

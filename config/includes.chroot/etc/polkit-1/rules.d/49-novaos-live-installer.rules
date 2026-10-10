@@ -1,0 +1,45 @@
+/* NovaOS — autorisation polkit pour l'installateur en session live.
+ *
+ * Autorise l'utilisateur live (membre du groupe « novaos-live », créé
+ * uniquement dans la session live par live-config) à lancer Calamares
+ * sans mot de passe, via l'icône « Installer NovaOS » du bureau.
+ *
+ * Sécurité : le groupe « novaos-live » est créé vide dans l'image ; il n'a
+ * de membres que dans la session live (l'utilisateur « user » créé au
+ * démarrage par live-boot). Sur un système installé, le groupe est vide :
+ * cette règle ne s'y applique donc jamais. La session live étant éphémère
+ * (mot de passe « live » public, sudo sans mot de passe via
+ * /etc/sudoers.d/live), cette autorisation n'y ajoute aucune surface
+ * d'attaque.
+ */
+polkit.addRule(function(action, subject) {
+    if (!subject.local || !subject.active || !subject.isInGroup("novaos-live")) {
+        return polkit.Result.NOT_HANDLED;
+    }
+
+    /* Action propre à Calamares : le paquet calamares livre le fichier
+     * com.github.calamares.calamares.policy (annotation
+     * org.freedesktop.policykit.exec.path = /usr/bin/calamares), que pkexec
+     * utilise comme identifiant d'action. */
+    if (action.id == "com.github.calamares.calamares.pkexec.run") {
+        return polkit.Result.YES;
+    }
+
+    /* Action générique de secours, au cas où le paquet calamares ne
+     * livrerait pas sa politique : on vérifie alors le programme lancé
+     * (détail « program » transmis par pkexec). */
+    if (action.id == "org.freedesktop.policykit.exec") {
+        var program = "";
+        if (typeof action.lookup === "function") {
+            program = action.lookup("program") || "";
+        }
+        if (!program && action._detail_program) {
+            program = action._detail_program;
+        }
+        if (program == "/usr/bin/calamares" || program == "/usr/sbin/calamares") {
+            return polkit.Result.YES;
+        }
+    }
+
+    return polkit.Result.NOT_HANDLED;
+});

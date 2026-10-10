@@ -1,0 +1,20 @@
+// NovaOS — mises à jour automatiques (sécurité + correctifs)
+// Complète la configuration livrée par le paquet unattended-upgrades.
+
+Unattended-Upgrade::Allowed-Origins {
+    "${distro_id}:${distro_codename}";
+    "${distro_id}:${distro_codename}-updates";
+    "${distro_id}:${distro_codename}-security";
+};
+
+Unattended-Upgrade::AutoFixInterruptedDpkg "true";
+Unattended-Upgrade::MinimalSteps "true";
+Unattended-Upgrade::InstallOnShutdown "false";
+Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+Unattended-Upgrade::Remove-New-Unused-Dependencies "true";
+Unattended-Upgrade::Automatic-Reboot "false";
+Unattended-Upgrade::SyslogEnable "true";
+
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Download-Upgradeable-Packages "1";
+APT::Periodic::AutocleanInterval "7";
