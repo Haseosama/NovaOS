@@ -101,8 +101,12 @@ Rectangle {
             Image {
                 Layout.alignment: Qt.AlignHCenter
                 source: "/usr/share/novaos/novaos-logo.png"
-                width: 72
-                height: 72
+                // Taille imposée : dans un ColumnLayout, width/height sont
+                // ignorés et l'image (1024 px) envahissait tout l'écran.
+                Layout.preferredWidth: 72
+                Layout.preferredHeight: 72
+                sourceSize.width: 144
+                sourceSize.height: 144
                 fillMode: Image.PreserveAspectFit
                 smooth: true
             }
