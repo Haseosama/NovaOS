@@ -1,0 +1,41 @@
+#!/bin/bash
+#
+# NovaOS — hook live-build : compte de la session live
+#
+# Le compte « user » (mot de passe « live ») est créé ici, dans l'image, au
+# lieu de compter sur live-config au démarrage : la connexion (automatique ou
+# manuelle) fonctionne ainsi à coup sûr dans la session live.
+#
+# Sur un système installé, ce compte est supprimé par Calamares (module
+# removeuser) et, par sécurité, verrouillé par novaos-firstboot.
+#
+set -e
+
+LIVE_USER=user
+# Empreinte SHA-512 du mot de passe « live » (openssl passwd -6 live).
+# usermod -p contourne PAM : la politique de mots de passe NovaOS
+# (12 caractères minimum) refuserait sinon ce mot de passe de démonstration.
+LIVE_HASH='$6$novaoslive$Pol2b5uozLwn3gTjjyYMrvgpFg/guq3j.9OB.MbWnljDtwRHylspOcvKfPIxUb9bDEkP2CPZqtS80svG7KNkB.'
+
+if ! getent passwd "$LIVE_USER" >/dev/null; then
+    useradd --create-home --uid 1000 --shell /bin/bash \
+        --comment "Session live NovaOS" "$LIVE_USER"
+fi
+usermod -p "$LIVE_HASH" "$LIVE_USER"
+# Pas d'expiration du mot de passe pour le compte live (login.defs : 90 jours)
+chage -m 0 -M 99999 -W 7 "$LIVE_USER"
+
+groupadd -f novaos-live
+for g in audio cdrom dip floppy video plugdev netdev powerdev scanner \
+         bluetooth lpadmin sudo novaos-live; do
+    if getent group "$g" >/dev/null; then
+        usermod -aG "$g" "$LIVE_USER"
+    fi
+done
+
+# Le dossier personnel reprend /etc/skel (icône « Installer NovaOS », thème…)
+cp -a /etc/skel/. "/home/$LIVE_USER/" 2>/dev/null || true
+chown -R "$LIVE_USER:$LIVE_USER" "/home/$LIVE_USER"
+chmod 0750 "/home/$LIVE_USER"
+
+exit 0

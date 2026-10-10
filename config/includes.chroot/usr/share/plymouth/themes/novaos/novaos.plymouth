@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=NovaOS
+Description=Écran de démarrage NovaOS : logo hexagonal, fond néon, barre de progression bleue
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/novaos
+ScriptFile=/usr/share/plymouth/themes/novaos/novaos.script
