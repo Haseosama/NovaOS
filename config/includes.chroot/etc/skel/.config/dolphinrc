@@ -7,6 +7,10 @@ ShowStatusBar=true
 ShowZoomSlider=true
 RememberOpenedTabs=false
 OpenNewTabAfterLastTab=true
+# Onglets façon Windows 11 : un dossier ouvert depuis le bureau, la barre des
+# tâches ou une autre application s'ouvre dans un nouvel onglet de la fenêtre
+# déjà ouverte (Ctrl+T : nouvel onglet, clic molette : ouvrir en onglet)
+OpenExternallyCalledFolderInNewTab=true
 ShowSelectionToggle=true
 BrowseThroughArchives=true
 ConfirmClosingMultipleTabs=false
