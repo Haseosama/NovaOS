@@ -19,12 +19,44 @@ apt_retry() {
 }
 
 # --- Media Player Classic : mpc-qt (clone Linux de MPC-HC), lecteur vidéo par défaut ---
+# Pas de paquet Debian : on prend l'AppImage officielle (GitHub mpc-qt), extraite
+# dans /opt/mpc-qt (pas besoin de FUSE).
+MPC_DESKTOP=""
 if apt_retry install -y mpc-qt >/dev/null 2>&1; then
     MPC_DESKTOP="$(grep -l -i -E '^Exec=.*mpc-qt' /usr/share/applications/*.desktop 2>/dev/null | head -n1)"
-    if [ -n "$MPC_DESKTOP" ]; then
-        MPC_ID="$(basename "$MPC_DESKTOP")"
-        MIMES="video/mp4 video/x-matroska video/webm video/x-msvideo video/avi video/quicktime video/mpeg video/x-flv video/ogg video/3gpp video/x-ms-wmv video/mp2t video/x-m4v"
-        python3 - "$MPC_ID" $MIMES <<'PY' || true
+else
+    url="$(curl -fsSL --retry 3 https://api.github.com/repos/mpc-qt/mpc-qt/releases/latest 2>/dev/null \
+        | grep -o '"browser_download_url": *"[^"]*x86_64[^"]*\.AppImage"' | head -n1 | sed 's/.*"\(https[^"]*\)"/\1/')"
+    if [ -n "$url" ] && curl -fsSL --retry 3 -o /tmp/mpc-qt.AppImage "$url"; then
+        chmod +x /tmp/mpc-qt.AppImage
+        rm -rf /opt/mpc-qt /tmp/squashfs-root
+        if (cd /tmp && ./mpc-qt.AppImage --appimage-extract >/dev/null 2>&1) && [ -x /tmp/squashfs-root/AppRun ]; then
+            mv /tmp/squashfs-root /opt/mpc-qt
+            chmod -R a+rX /opt/mpc-qt
+            printf '#!/bin/sh\nexec /opt/mpc-qt/AppRun "$@"\n' > /usr/local/bin/mpc-qt
+            chmod +x /usr/local/bin/mpc-qt
+            icon="$(find /opt/mpc-qt -maxdepth 1 \( -name '*.png' -o -name '*.svg' \) | head -n1)"
+            cat > /usr/share/applications/novaos-mpc-qt.desktop <<DESK
+[Desktop Entry]
+Type=Application
+Name=Media Player Classic (mpc-qt)
+GenericName=Lecteur vidéo
+Comment=Lecteur vidéo façon Media Player Classic
+Exec=/usr/local/bin/mpc-qt %F
+Icon=${icon:-multimedia-video-player}
+Terminal=false
+Categories=AudioVideo;Video;Player;
+MimeType=video/mp4;video/x-matroska;video/webm;video/x-msvideo;video/avi;video/quicktime;video/mpeg;video/x-flv;video/ogg;video/3gpp;video/x-ms-wmv;video/mp2t;video/x-m4v;
+DESK
+            MPC_DESKTOP=/usr/share/applications/novaos-mpc-qt.desktop
+        fi
+        rm -f /tmp/mpc-qt.AppImage; rm -rf /tmp/squashfs-root
+    fi
+fi
+if [ -n "$MPC_DESKTOP" ]; then
+    MPC_ID="$(basename "$MPC_DESKTOP")"
+    MIMES="video/mp4 video/x-matroska video/webm video/x-msvideo video/avi video/quicktime video/mpeg video/x-flv video/ogg video/3gpp video/x-ms-wmv video/mp2t video/x-m4v"
+    python3 - "$MPC_ID" $MIMES <<'PY' || true
 import sys, configparser
 mid, mimes = sys.argv[1], sys.argv[2:]
 p = "/etc/xdg/mimeapps.list"
@@ -37,10 +69,7 @@ for m in mimes:
     c.set("Added Associations", m, mid + ";")
 with open(p, "w") as f: c.write(f, space_around_delimiters=False)
 PY
-        echo "[novaos] Media Player Classic (mpc-qt) installé, lecteur vidéo par défaut ($MPC_ID)"
-    else
-        echo "[novaos] mpc-qt installé (raccourci introuvable, VLC reste le lecteur par défaut)"
-    fi
+    echo "[novaos] Media Player Classic (mpc-qt) installé, lecteur vidéo par défaut ($MPC_ID)"
 else
     echo "[novaos] AVERTISSEMENT : mpc-qt indisponible, VLC reste le lecteur vidéo" >&2
 fi
