@@ -46,6 +46,29 @@ if [ -f "$MARKER" ]; then
 fi
 touch "$MARKER" 2>/dev/null || true
 
+# — Thème NovaOS appliqué au compte dès la première session —
+# (les réglages système de /etc/xdg suffisent normalement ; on les inscrit
+# aussi dans ~/.config pour qu'aucun ancien réglage Breeze ne reprenne le dessus)
+if command -v plasma-apply-colorscheme >/dev/null 2>&1; then
+    plasma-apply-colorscheme NovaOS-Dark >/dev/null 2>&1 || true
+fi
+if command -v plasma-apply-desktoptheme >/dev/null 2>&1; then
+    plasma-apply-desktoptheme novaglass >/dev/null 2>&1 || true
+fi
+KWC="$(command -v kwriteconfig6 || command -v kwriteconfig5 || true)"
+if [ -n "$KWC" ]; then
+    "$KWC" --file kdeglobals --group KDE --key LookAndFeelPackage org.novaos.desktop
+    "$KWC" --file kdeglobals --group Icons --key Theme Papirus-Dark
+    if grep -q '^widgetStyle=kvantum' /etc/xdg/kdeglobals 2>/dev/null; then
+        "$KWC" --file kdeglobals --group KDE --key widgetStyle kvantum
+    fi
+    "$KWC" --file kwinrc --group org.kde.kdecoration2 --key library org.kde.breeze
+    "$KWC" --file kwinrc --group org.kde.kdecoration2 --key theme Breeze
+    "$KWC" --file kwinrc --group Plugins --key blurEnabled true
+    "$KWC" --file kwinrc --group Plugins --key contrastEnabled true
+    command -v qdbus6 >/dev/null 2>&1 && qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
+fi
+
 # — Fond d'écran NovaOS (au cas où le thème n'aurait pas été appliqué) —
 if command -v plasma-apply-wallpaper >/dev/null 2>&1; then
     plasma-apply-wallpaper /usr/share/wallpapers/NovaOS-Bloom/contents/images/1920x1080.jpg >/dev/null 2>&1 || true
