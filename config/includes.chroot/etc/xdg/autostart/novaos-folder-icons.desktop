@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NovaOS — icônes de dossiers Windows
+Comment=Applique les icônes desktop.ini / folder.jpg des dossiers
+Exec=sh -c 'sleep 30; nice -n 15 /usr/local/bin/novaos-folder-icons "$HOME" /media/"$USER" /run/media/"$USER" >/dev/null 2>&1'
+Terminal=false
+NoDisplay=true
+X-KDE-autostart-phase=2

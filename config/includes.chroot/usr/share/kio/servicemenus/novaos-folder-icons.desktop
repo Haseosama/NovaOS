@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Service
+MimeType=inode/directory;
+Actions=novaosFolderIcons;
+X-KDE-Priority=TopLevel
+
+[Desktop Action novaosFolderIcons]
+Name=Appliquer les icônes de dossiers Windows
+Icon=folder-pictures
+Exec=sh -c '/usr/local/bin/novaos-folder-icons "$@" | xargs -0 -I{} notify-send -a NovaOS -i folder "Icônes de dossiers" "{}"' _ %F
