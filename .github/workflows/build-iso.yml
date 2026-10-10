@@ -19,23 +19,53 @@ jobs:
   build-iso:
     name: NovaOS — construction de l'ISO (Debian live-build)
     runs-on: ubuntu-24.04
+    container:
+      image: debian:trixie
+      options: --privileged
     timeout-minutes: 240
     steps:
+      - name: Installation des dépendances de build
+        run: |
+          apt-get update
+          # git + certificats sont requis par actions/checkout dans le conteneur.
+          # Les outils syslinux/grub servent à produire une ISO hybride BIOS+UEFI.
+          apt-get install -y --no-install-recommends \
+            ca-certificates git live-build debootstrap xorriso squashfs-tools rsync wget \
+            isolinux syslinux-common syslinux-utils grub-pc-bin grub-efi-amd64-bin mtools \
+            debian-archive-keyring
+        shell: bash
+
       - name: Récupération du dépôt
         uses: actions/checkout@v4
 
-      - name: Installation des dépendances de build
-        run: |
-          sudo apt-get update
-          # isolinux/syslinux-common + grub-*-bin + mtools : nécessaires pour
-          # l'ISO hybride BIOS+UEFI (syslinux + grub-efi) généré par live-build
-          sudo apt-get install -y --no-install-recommends \
-            live-build debootstrap xorriso squashfs-tools rsync wget \
-            isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin mtools \
-            debian-archive-keyring
-
       - name: Construction de l'ISO
-        run: sudo ./build.sh
+        run: |
+          set -o pipefail
+          ./build.sh 2>&1 | tee "$RUNNER_TEMP/novaos-build.log"
+        shell: bash
+
+      - name: Diagnostic en cas d'échec
+        if: failure()
+        run: |
+          {
+            echo "## Diagnostic de construction NovaOS"
+            echo '```text'
+            if [ -f "$RUNNER_TEMP/novaos-build.log" ]; then
+              tail -n 100 "$RUNNER_TEMP/novaos-build.log"
+            else
+              echo "Le journal de construction n'est pas disponible."
+            fi
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ -f "$RUNNER_TEMP/novaos-build.log" ]; then
+            diagnostic="$(tail -n 35 "$RUNNER_TEMP/novaos-build.log")"
+            diagnostic=${diagnostic//'%'/'%25'}
+            diagnostic=${diagnostic//$'\r'/'%0D'}
+            diagnostic=${diagnostic//$'\n'/'%0A'}
+            echo "::error title=NovaOS build diagnostic::$diagnostic"
+          fi
+        shell: bash
 
       - name: Somme de contrôle SHA256
         run: |
