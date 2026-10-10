@@ -31,11 +31,27 @@ jobs:
           # l'ISO hybride BIOS+UEFI (syslinux + grub-efi) généré par live-build
           sudo apt-get install -y --no-install-recommends \
             live-build debootstrap xorriso squashfs-tools rsync wget \
-            isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin mtools \
+            isolinux syslinux-common syslinux-utils grub-pc-bin grub-efi-amd64-bin mtools \
             debian-archive-keyring
 
       - name: Construction de l'ISO
-        run: sudo ./build.sh
+        run: |
+          set -o pipefail
+          sudo ./build.sh 2>&1 | tee "$RUNNER_TEMP/novaos-build.log"
+
+      - name: Diagnostic en cas d'échec
+        if: failure()
+        run: |
+          {
+            echo "## Diagnostic de construction NovaOS"
+            echo '```text'
+            if [ -f "$RUNNER_TEMP/novaos-build.log" ]; then
+              tail -n 100 "$RUNNER_TEMP/novaos-build.log"
+            else
+              echo "Le journal de construction n'est pas disponible."
+            fi
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Somme de contrôle SHA256
         run: |

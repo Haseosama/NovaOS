@@ -24,11 +24,11 @@ Elle est **sécurisée par défaut** et **démarre automatiquement sur le bureau
 
 - Un hôte **Debian 12/13** ou **Ubuntu 22.04+** (la construction se fait dans un chroot : **root requis**)
 - ~20 Go d'espace disque libres, 4 Go de RAM
-- Les outils : `live-build`, `debootstrap`, `xorriso`, `squashfs-tools`, `rsync`, `wget` + les outils de l'ISO hybride BIOS+UEFI : `isolinux`, `syslinux-common`, `grub-pc-bin`, `grub-efi-amd64-bin`, `mtools`
+- Les outils : `live-build`, `debootstrap`, `xorriso`, `squashfs-tools`, `rsync`, `wget` + les outils de l'ISO hybride BIOS+UEFI : `isolinux`, `syslinux-common`, `syslinux-utils` (fournit `isohybrid`), `grub-pc-bin`, `grub-efi-amd64-bin`, `mtools`
 
 ```bash
 sudo apt install live-build debootstrap xorriso squashfs-tools rsync wget \
-  isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin mtools
+  isolinux syslinux-common syslinux-utils grub-pc-bin grub-efi-amd64-bin mtools
 ```
 
 ## 🏗️ Construire l'ISO

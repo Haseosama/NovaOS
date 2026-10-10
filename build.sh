@@ -57,7 +57,7 @@ fi
 # Outils nécessaires sur l'hôte (l'ISO est hybride BIOS+UEFI : syslinux + grub-efi)
 for dep in lb xorriso mksquashfs rsync wget debootstrap isohybrid grub-mkimage; do
     command -v "$dep" >/dev/null 2>&1 \
-        || die "Dépendance manquante : '$dep'. Installez : sudo apt install live-build debootstrap xorriso squashfs-tools rsync wget isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin mtools"
+        || die "Dépendance manquante : '$dep'. Installez : sudo apt install live-build debootstrap xorriso squashfs-tools rsync wget isolinux syslinux-common syslinux-utils grub-pc-bin grub-efi-amd64-bin mtools"
 done
 
 log "Distribution : Debian $DISTRO ($ARCH)"
