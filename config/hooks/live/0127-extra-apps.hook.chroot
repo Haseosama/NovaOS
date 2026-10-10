@@ -18,6 +18,33 @@ apt_retry() {
     return 1
 }
 
+# --- Media Player Classic : mpc-qt (clone Linux de MPC-HC), lecteur vidéo par défaut ---
+if apt_retry install -y mpc-qt >/dev/null 2>&1; then
+    MPC_DESKTOP="$(grep -l -i -E '^Exec=.*mpc-qt' /usr/share/applications/*.desktop 2>/dev/null | head -n1)"
+    if [ -n "$MPC_DESKTOP" ]; then
+        MPC_ID="$(basename "$MPC_DESKTOP")"
+        MIMES="video/mp4 video/x-matroska video/webm video/x-msvideo video/avi video/quicktime video/mpeg video/x-flv video/ogg video/3gpp video/x-ms-wmv video/mp2t video/x-m4v"
+        python3 - "$MPC_ID" $MIMES <<'PY' || true
+import sys, configparser
+mid, mimes = sys.argv[1], sys.argv[2:]
+p = "/etc/xdg/mimeapps.list"
+c = configparser.ConfigParser(interpolation=None, delimiters=("=",)); c.optionxform = str
+c.read(p)
+for g in ("Default Applications", "Added Associations"):
+    if not c.has_section(g): c.add_section(g)
+for m in mimes:
+    c.set("Default Applications", m, mid + ";")
+    c.set("Added Associations", m, mid + ";")
+with open(p, "w") as f: c.write(f, space_around_delimiters=False)
+PY
+        echo "[novaos] Media Player Classic (mpc-qt) installé, lecteur vidéo par défaut ($MPC_ID)"
+    else
+        echo "[novaos] mpc-qt installé (raccourci introuvable, VLC reste le lecteur par défaut)"
+    fi
+else
+    echo "[novaos] AVERTISSEMENT : mpc-qt indisponible, VLC reste le lecteur vidéo" >&2
+fi
+
 # --- Brave ---
 KEYRING=/usr/share/keyrings/brave-browser-archive-keyring.gpg
 if curl -fsSL --retry 3 -o "$KEYRING" \
