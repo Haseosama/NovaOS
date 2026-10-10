@@ -1,0 +1,19 @@
+# NovaOS — applications par défaut (tous les utilisateurs)
+# Double-clic sur un programme Windows → Wine (novaos-wine-run)
+
+[Default Applications]
+application/x-ms-dos-executable=novaos-wine-run.desktop
+application/vnd.microsoft.portable-executable=novaos-wine-run.desktop
+application/x-msdownload=novaos-wine-run.desktop
+application/x-dosexec=novaos-wine-run.desktop
+application/x-ms-ne-executable=novaos-wine-run.desktop
+application/x-msi=novaos-wine-run.desktop
+application/x-ms-shortcut=novaos-wine-run.desktop
+application/x-bat=novaos-wine-run.desktop
+application/x-wine-extension-msp=novaos-wine-run.desktop
+
+[Added Associations]
+application/x-ms-dos-executable=novaos-wine-run.desktop;
+application/vnd.microsoft.portable-executable=novaos-wine-run.desktop;
+application/x-msdownload=novaos-wine-run.desktop;
+application/x-msi=novaos-wine-run.desktop;

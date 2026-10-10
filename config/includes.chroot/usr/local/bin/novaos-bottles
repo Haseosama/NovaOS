@@ -1,0 +1,32 @@
+#!/bin/bash
+#
+# NovaOS — Bottles : gestionnaire d'environnements Windows isolés
+#
+# Bottles (Flathub) crée des « bouteilles » séparées par jeu ou logiciel,
+# avec les bons composants (DXVK, .NET, Visual C++…) en un clic.
+# Il est installé à la demande (≈ 600 Mo) au premier lancement.
+#
+set -u
+APP=com.usebottles.bottles
+
+if flatpak info "$APP" >/dev/null 2>&1; then
+    exec flatpak run "$APP" "$@"
+fi
+
+kdialog --title "Bottles" --yesno "Bottles n'est pas encore installé.
+
+Bottles gère des environnements Windows isolés (un par jeu ou logiciel), avec DXVK, .NET et Visual C++ en un clic.
+
+Le télécharger maintenant depuis Flathub (environ 600 Mo) ?" >/dev/null 2>&1 || exit 0
+
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+if command -v konsole >/dev/null 2>&1; then
+    konsole --hide-menubar -p tabtitle="Installation de Bottles" \
+        -e bash -c "flatpak install --user -y flathub $APP || { echo; echo 'Échec de l installation (connexion Internet ?)'; read -r -p 'Entrée pour fermer'; }"
+else
+    flatpak install --user -y flathub "$APP"
+fi
+
+flatpak info "$APP" >/dev/null 2>&1 && exec flatpak run "$APP" "$@"
+exit 1

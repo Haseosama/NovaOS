@@ -10,6 +10,12 @@ on:
       - "assets/**"
       - "build.sh"
       - ".github/workflows/build-iso.yml"
+  pull_request:
+    paths:
+      - "config/**"
+      - "assets/**"
+      - "build.sh"
+      - ".github/workflows/build-iso.yml"
   workflow_dispatch:
 
 permissions:

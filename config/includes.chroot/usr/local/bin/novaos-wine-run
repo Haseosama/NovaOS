@@ -1,0 +1,56 @@
+#!/bin/bash
+#
+# NovaOS — lance un programme Windows (.exe, .msi, .bat, .lnk) avec Wine
+#
+# Appelé par le double-clic dans Dolphin ou sur le bureau (association de
+# fichiers /etc/xdg/mimeapps.list). Utilisable aussi en ligne de commande :
+#   novaos-wine-run setup.exe
+#
+# Les programmes s'installent dans l'environnement Windows du compte
+# (~/.wine, « C:\ » = ~/.wine/drive_c) et apparaissent ensuite dans le menu
+# Démarrer, rubrique « Wine ».
+#
+set -u
+
+export WINEPREFIX="${WINEPREFIX:-$HOME/.wine}"
+export WINEDEBUG="${WINEDEBUG:--all}"
+
+notify() {
+    if command -v kdialog >/dev/null 2>&1; then
+        kdialog --title "NovaOS · Programmes Windows" --passivepopup "$1" 8 >/dev/null 2>&1 &
+    fi
+}
+
+error() {
+    if command -v kdialog >/dev/null 2>&1; then
+        kdialog --title "NovaOS · Programmes Windows" --error "$1" >/dev/null 2>&1
+    else
+        echo "novaos-wine-run : $1" >&2
+    fi
+    exit 1
+}
+
+command -v wine >/dev/null 2>&1 || error "Wine n'est pas installé : sudo apt install wine wine32:i386"
+
+FILE="${1:-}"
+if [ -z "$FILE" ]; then
+    # Sans argument : ouvre la configuration de l'environnement Windows
+    exec winecfg
+fi
+[ -e "$FILE" ] || error "Fichier introuvable : $FILE"
+FILE="$(readlink -f "$FILE")"
+shift
+
+# Premier lancement : création de l'environnement Windows (≈ 30 s)
+if [ ! -f "$WINEPREFIX/system.reg" ]; then
+    notify "Préparation de l'environnement Windows (premier lancement, environ 30 secondes)…"
+    wineboot --init >/dev/null 2>&1 || true
+fi
+
+cd "$(dirname "$FILE")" || true
+case "${FILE,,}" in
+    *.msi)        exec wine msiexec /i "$FILE" "$@" ;;
+    *.bat|*.cmd)  exec wine cmd /c "$FILE" "$@" ;;
+    *.lnk)        exec wine start /unix "$FILE" "$@" ;;
+    *)            exec wine "$FILE" "$@" ;;
+esac

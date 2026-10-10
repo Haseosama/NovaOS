@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Programme Windows (Wine)
+GenericName=Lanceur de programmes Windows
+Comment=Lancer ou installer un programme Windows (.exe, .msi)
+Exec=/usr/local/bin/novaos-wine-run %f
+Icon=wine
+Terminal=false
+NoDisplay=true
+StartupNotify=true
+MimeType=application/x-ms-dos-executable;application/vnd.microsoft.portable-executable;application/x-msdownload;application/x-dosexec;application/x-ms-ne-executable;application/x-msi;application/x-ms-shortcut;application/x-bat;application/x-wine-extension-msp;
+Categories=System;Emulator;

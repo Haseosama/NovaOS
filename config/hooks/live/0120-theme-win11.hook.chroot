@@ -5,7 +5,7 @@
 # Le thème lui-même est déposé via config/includes.chroot :
 #   - /usr/share/color-schemes/NovaOS-Dark.colors   (palette)
 #   - /etc/xdg/kdeglobals, /etc/xdg/kwinrc           (thème sombre, accent #0078D4)
-#   - /etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc  (barre centrée Win11)
+#   - /usr/share/plasma/look-and-feel/org.novaos.desktop/  (barre centrée flottante Win11)
 #   - /usr/share/wallpapers/NovaOS-*                 (fonds d'écran)
 #   - /usr/share/sddm/themes/novaos/                 (écran de connexion)
 #

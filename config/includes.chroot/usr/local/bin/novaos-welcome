@@ -27,7 +27,18 @@ MESSAGE="Bienvenue dans NovaOS 2026.10 !
 
 NovaOS est basé sur Debian 13 « trixie » et propose un bureau KDE Plasma 6 au look futuriste inspiré de Windows 11.
 
+Programmes Windows (.exe) :
+  • Double-cliquez sur un fichier .exe ou .msi : il se lance (ou s'installe) avec Wine, comme sous Windows.
+  • Les programmes installés apparaissent dans le menu Démarrer (rubrique « Wine »).
+  • Pour les jeux et logiciels exigeants, ouvrez « Bottles » : un environnement Windows isolé par programme.
+  • Les autres applications s'installent depuis la boutique « Discover ».
+
+Raccourcis futuristes :
+  • Touche Windows : menu Démarrer · Meta+W : vue d'ensemble · Alt+Espace : recherche universelle (KRunner).
+  • Glissez une fenêtre en haut de l'écran pour l'agrandir, sur un côté pour la moitié de l'écran.
+
 Quelques conseils pour rester en sécurité :
+  • N'ouvrez que des .exe de confiance : Wine les exécute avec vos droits.
   • Verrouillez votre session (Ctrl+Alt+L) quand vous vous éloignez.
   • Le pare-feu (UFW) est actif : gérez-le avec l'application « Pare-feu » (Gufw).
   • Les mises à jour de sécurité s'installent automatiquement.

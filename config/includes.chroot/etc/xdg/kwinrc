@@ -1,11 +1,32 @@
-# NovaOS — KWin (compositage, flou « verre dépoli » façon Windows 11)
+# NovaOS — KWin (compositage, effets futuristes façon Windows 11)
 
 [Compositing]
 Enabled=true
 
-[Effect-blur]
-Enabled=true
-
 [Plugins]
+# Flou « verre dépoli » derrière la barre, les menus et Konsole
 blurEnabled=true
-kwin4_effect_blurEnabled=true
+# Animation de réduction des fenêtres vers la barre des tâches
+magiclampEnabled=true
+# Fenêtres légèrement translucides pendant leur déplacement
+translucencyEnabled=true
+
+[Effect-blur]
+BlurStrength=12
+NoiseStrength=4
+
+[Effect-translucency]
+MoveResize=85
+
+[org.kde.kdecoration2]
+library=org.kde.breeze
+theme=Breeze
+# Boutons à droite, ordre Windows : réduire, agrandir, fermer
+ButtonsOnLeft=
+ButtonsOnRight=IAX
+
+[Windows]
+# Ancrage aux bords : glisser une fenêtre en haut pour l'agrandir,
+# sur un côté pour la moitié de l'écran (comme les « Snap layouts »)
+ElectricBorderMaximize=true
+ElectricBorderTiling=true

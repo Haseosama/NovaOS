@@ -1,0 +1,18 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Id": "org.novaos.desktop",
+        "Name": "NovaOS",
+        "Name[fr]": "NovaOS",
+        "Description": "Futuristic Windows 11–inspired look for NovaOS",
+        "Description[fr]": "Look futuriste NovaOS inspiré de Windows 11 (barre centrée flottante, thème sombre, accent bleu)",
+        "Authors": [
+            {
+                "Name": "NovaOS Project"
+            }
+        ],
+        "License": "MIT",
+        "Version": "2026.10",
+        "Website": "https://github.com/Haseosama/NovaOS"
+    }
+}
