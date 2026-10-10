@@ -21,8 +21,9 @@ test:
 check:
 	bash -n build.sh
 	bash -n vm-test.sh
-	@find config/hooks -name '*.hook.chroot' -exec bash -n {} \;
-	@find config/includes.chroot/usr/local/bin config/includes.chroot/etc/profile.d -name 'novaos-*' -type f -exec bash -n {} \;
+	@set -e; for f in $$(find config/hooks -name '*.hook.chroot' -o -name '*.hook.binary'); do bash -n "$$f"; done
+	@set -e; for f in $$(find config/includes.chroot/usr/local/bin config/includes.chroot/etc/profile.d -name 'novaos-*' -type f); do \
+		if head -n1 "$$f" | grep -q python; then python3 -m py_compile "$$f"; else bash -n "$$f"; fi; done
 	@echo "✔ Syntaxe des scripts OK"
 
 clean:
