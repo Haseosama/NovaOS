@@ -1,0 +1,7 @@
+# NovaOS — copies de fichiers façon Windows : la fenêtre d'avancement reste
+# affichée pendant toute la copie (vitesse en Mo/s, temps restant, fichiers),
+# et la progression apparaît aussi sur l'icône dans la barre des tâches.
+[Jobs]
+InNotifications=true
+PermanentPopups=true
+InTaskManager=true
