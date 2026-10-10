@@ -136,6 +136,8 @@ if [ -d "$CSRC" ] && command -v xcursorgen >/dev/null 2>&1; then
         sed -i 's/^gtk-cursor-theme-name=Breeze_Snow/gtk-cursor-theme-name=NovaOS-Cursors/' /etc/xdg/gtk-3.0/settings.ini
         mkdir -p /usr/share/icons/default
         printf '[Icon Theme]\nInherits=NovaOS-Cursors\n' > /usr/share/icons/default/index.theme
+        # Écran de connexion SDDM : même pointeur
+        printf '[Theme]\nCursorTheme=NovaOS-Cursors\nCursorSize=24\n' > /etc/sddm.conf.d/20-novaos-cursor.conf
         echo "[novaos] pointeur NovaOS installé ($(ls "$CDST/cursors" | wc -l) curseurs)"
     else
         echo "[novaos] AVERTISSEMENT : pointeur NovaOS incomplet, Breeze_Snow conservé" >&2

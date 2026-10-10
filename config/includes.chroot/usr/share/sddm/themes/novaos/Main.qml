@@ -18,8 +18,9 @@ Rectangle {
     id: root
 
     // — Palette NovaOS —
-    readonly property color novaAccent:      "#0078d4"
-    readonly property color novaAccentLight: "#3daee9"
+    readonly property color novaAccent:      "#00b4ff"
+    readonly property color novaAccentLight: "#00e5ff"
+    readonly property color novaViolet:      "#8b5cf6"
     readonly property color novaText:        "#eff0f1"
     readonly property color novaTextDim:     "#9ca3af"
     readonly property color novaPanel:       "#2b1b2440" // verre sombre (AARRGGBB)
@@ -33,7 +34,7 @@ Rectangle {
     Image {
         id: background
         anchors.fill: parent
-        source: "background.jpg"
+        source: "/usr/share/wallpapers/NovaOS-Bloom/contents/images/1920x1080.jpg"
         fillMode: Image.PreserveAspectCrop
         smooth: true
         mipmap: true
@@ -86,10 +87,35 @@ Rectangle {
         height: cardContent.implicitHeight + 56
         anchors.centerIn: parent
         anchors.verticalCenterOffset: root.height * 0.05
-        radius: 18
+        radius: 20
         color: root.novaPanel
-        border.color: "#330078d4"
+        border.color: "#7300e5ff"
         border.width: 1
+
+        // Halo néon autour de la carte
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: -6
+            z: -1
+            radius: parent.radius + 6
+            color: "transparent"
+            border.color: "#2600e5ff"
+            border.width: 6
+        }
+        // Liseré lumineux en haut de la carte
+        Rectangle {
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: parent.width * 0.6
+            height: 2
+            radius: 1
+            gradient: Gradient {
+                orientation: Gradient.Horizontal
+                GradientStop { position: 0.0; color: "#0000e5ff" }
+                GradientStop { position: 0.5; color: "#ff00e5ff" }
+                GradientStop { position: 1.0; color: "#008b5cf6" }
+            }
+        }
 
         ColumnLayout {
             id: cardContent
@@ -100,7 +126,7 @@ Rectangle {
             // Logo NovaOS
             Image {
                 Layout.alignment: Qt.AlignHCenter
-                source: "/usr/share/novaos/novaos-logo.png"
+                source: "/usr/share/plymouth/themes/novaos/logo.png"
                 // Taille imposée : dans un ColumnLayout, width/height sont
                 // ignorés et l'image (1024 px) envahissait tout l'écran.
                 Layout.preferredWidth: 72
@@ -178,7 +204,12 @@ Rectangle {
                 onClicked: tryLogin()
                 background: Rectangle {
                     radius: 10
-                    color: loginButton.hovered ? root.novaAccentLight : root.novaAccent
+                    opacity: loginButton.hovered ? 1.0 : 0.88
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: root.novaAccent }
+                        GradientStop { position: 1.0; color: root.novaViolet }
+                    }
                 }
                 contentItem: QQC2.Label {
                     text: loginButton.text
@@ -247,8 +278,8 @@ Rectangle {
         padding: 10
         background: Rectangle {
             radius: 10
-            color: pb.hovered ? "#400078d4" : "#26ffffff"
-            border.color: "#33ffffff"
+            color: pb.hovered ? "#4000b4ff" : "#26ffffff"
+            border.color: pb.hovered ? "#9900e5ff" : "#33ffffff"
             border.width: 1
         }
         contentItem: QQC2.Label {
