@@ -27,8 +27,8 @@ Theme=NovaOS
 [KDE]
 LookAndFeelPackage=org.novaos.desktop
 widgetStyle=Breeze
-# Windows 11 ouvre les dossiers d'un simple clic
-SingleClick=true
+# Comme sous Windows : un clic sélectionne, un double-clic ouvre
+SingleClick=false
 # Animations un peu plus vives (1.0 = normal, < 1 = plus rapide)
 AnimationDurationFactor=0.7
 
