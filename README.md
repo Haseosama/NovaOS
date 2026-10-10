@@ -22,7 +22,7 @@ Elle est **sécurisée par défaut** et **démarre automatiquement sur le bureau
 
 ## 🛠️ Prérequis (pour construire l'ISO)
 
-- Un hôte **Debian 12/13** ou **Ubuntu 22.04+** (la construction se fait dans un chroot : **root requis**)
+- Un hôte **Debian 12/13** (la construction se fait dans un chroot : **root requis**). Le paquet `live-build` fourni par Ubuntu 24.04 est trop ancien pour les options utilisées ici.
 - ~20 Go d'espace disque libres, 4 Go de RAM
 - Les outils : `live-build`, `debootstrap`, `xorriso`, `squashfs-tools`, `rsync`, `wget` + les outils de l'ISO hybride BIOS+UEFI : `isolinux`, `syslinux-common`, `syslinux-utils` (fournit `isohybrid`), `grub-pc-bin`, `grub-efi-amd64-bin`, `mtools`
 
