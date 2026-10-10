@@ -8,11 +8,21 @@
 # touchés. Ensuite, le réglage se change normalement dans
 # Configuration du système → Affichage.
 #
+# En machine virtuelle (VMware, VirtualBox, QEMU…), on ne force rien : la
+# taille suit la fenêtre de la VM grâce aux outils invités (open-vm-tools,
+# spice-vdagent…), sinon 1920x1080 déborde et coupe le bas de l'écran
+# (barre des tâches invisible).
+#
 set -u
 
 MARKER="$HOME/.config/novaos/display-configured"
 [ -f "$MARKER" ] && exit 0
 command -v kscreen-doctor >/dev/null 2>&1 || exit 0
+if command -v systemd-detect-virt >/dev/null 2>&1 && systemd-detect-virt --vm --quiet; then
+    mkdir -p "$(dirname "$MARKER")"
+    touch "$MARKER"
+    exit 0
+fi
 
 # Laisse KScreen démarrer
 sleep 3

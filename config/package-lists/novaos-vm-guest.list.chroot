@@ -1,0 +1,7 @@
+# NovaOS — outils invités pour machines virtuelles
+# (écran qui suit la taille de la fenêtre, copier-coller, souris fluide).
+# Inactifs sur un vrai PC : leurs services ne démarrent qu'en VM.
+open-vm-tools
+open-vm-tools-desktop
+spice-vdagent
+qemu-guest-agent
