@@ -14,7 +14,7 @@ plasma-pa
 plasma-systemmonitor
 plasma-disks
 powerdevil
-kdeplasma-addons
+plasma-widgets-addons
 kwin-x11
 xwayland
 
@@ -22,7 +22,7 @@ xwayland
 breeze
 breeze-icon-theme
 breeze-cursor-theme
-breeze-gtk
+breeze-gtk-theme
 papirus-icon-theme
 
 # --- Audio (PipeWire) ---
