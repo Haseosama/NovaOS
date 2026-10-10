@@ -2,7 +2,7 @@
 Description=NovaOS — connexion automatique sur le bureau (SDDM)
 Documentation=https://github.com/Haseosama/NovaOS/blob/main/README.md
 # S'exécute avant le gestionnaire d'affichage, après le premier démarrage
-After=novaos-firstboot.service local-fs.target
+After=novaos-firstboot.service local-fs.target live-config.service
 Before=display-manager.service
 ConditionPathExists=/etc/sddm.conf.d
 

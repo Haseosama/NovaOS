@@ -4,12 +4,15 @@
  * fond sombre, panneau « verre dépoli », accent bleu électrique #0078D4.
  *
  * Chaînes en français (modifiez-les ici pour traduire le thème).
+ *
+ * Uniquement QtQuick.Controls (pas de SddmComponents : son import sans
+ * alias cassait le thème sous Qt 6). Objets fournis par SDDM : sddm, userModel,
+ * sessionModel.
  */
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Controls 2.15 as QQC2
 import QtQuick.Window 2.15
-import SddmComponents 2.0
 
 Rectangle {
     id: root
@@ -70,8 +73,8 @@ Rectangle {
             repeat: true
             onTriggered: {
                 var locale = Qt.locale("fr_FR")
-                timeLabel.text = Qt.formatDateTime(new Date(), "HH:mm", locale)
-                dateLabel.text = Qt.formatDateTime(new Date(), "dddd d MMMM yyyy", locale)
+                timeLabel.text = new Date().toLocaleTimeString(locale, "HH:mm")
+                dateLabel.text = new Date().toLocaleDateString(locale, "dddd d MMMM yyyy")
             }
         }
     }
@@ -113,10 +116,10 @@ Rectangle {
             }
 
             // Nom d'utilisateur
-            SddmComponents.TextBox {
+            QQC2.TextField {
                 id: userName
                 Layout.fillWidth: true
-                text: sddm.lastUser
+                text: userModel.lastUser
                 placeholderText: "Nom d'utilisateur"
                 placeholderTextColor: root.novaTextDim
                 color: root.novaText
@@ -132,8 +135,10 @@ Rectangle {
             }
 
             // Mot de passe
-            SddmComponents.PasswordBox {
+            QQC2.TextField {
                 id: password
+                echoMode: TextInput.Password
+                passwordCharacter: "●"
                 Layout.fillWidth: true
                 placeholderText: "Mot de passe"
                 placeholderTextColor: root.novaTextDim
@@ -161,7 +166,7 @@ Rectangle {
             }
 
             // Bouton de connexion
-            SddmComponents.Button {
+            QQC2.Button {
                 id: loginButton
                 Layout.fillWidth: true
                 text: "Se connecter"
@@ -181,26 +186,28 @@ Rectangle {
             }
 
             // Sélecteur de session (Plasma Wayland par défaut)
-            SddmComponents.ComboBox {
+            QQC2.ComboBox {
                 id: sessionCombo
                 Layout.fillWidth: true
-                model: sddm.sessions
+                model: sessionModel
                 textRole: "name"
                 font.pixelSize: 13
-                currentIndex: 0
-                Component.onCompleted: {
-                    for (var i = 0; i < model.length; ++i) {
-                        var s = model[i]
-                        var f = ""
-                        if (s.desktopFile !== undefined) { f = s.desktopFile }
-                        else if (s.desktopSession !== undefined) { f = s.desktopSession }
-                        else if (s.name !== undefined) { f = s.name }
-                        if (String(f).indexOf("plasma") !== -1) {
-                            currentIndex = i
-                            break
-                        }
-                    }
+                background: Rectangle {
+                    radius: 10
+                    color: root.novaField
+                    border.color: sessionCombo.activeFocus ? root.novaAccent : "#26ffffff"
+                    border.width: 1
                 }
+                contentItem: QQC2.Label {
+                    leftPadding: 12
+                    text: sessionCombo.displayText
+                    font: sessionCombo.font
+                    color: root.novaTextDim
+                    verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
+                }
+                // Dernière session utilisée (Plasma Wayland par défaut)
+                currentIndex: sessionModel.lastIndex >= 0 ? sessionModel.lastIndex : 0
             }
         }
     }
@@ -212,20 +219,40 @@ Rectangle {
         anchors.margins: 24
         spacing: 12
 
-        QQC2.Button {
+        PowerButton {
             text: "Suspendre"
             visible: sddm.canSuspend
             onClicked: sddm.suspend()
         }
-        QQC2.Button {
+        PowerButton {
             text: "Redémarrer"
             visible: sddm.canReboot
             onClicked: sddm.reboot()
         }
-        QQC2.Button {
+        PowerButton {
             text: "Éteindre"
             visible: sddm.canPowerOff
             onClicked: sddm.powerOff()
+        }
+    }
+
+    // Bouton d'alimentation « verre » (bas de l'écran)
+    component PowerButton: QQC2.Button {
+        id: pb
+        font.pixelSize: 13
+        padding: 10
+        background: Rectangle {
+            radius: 10
+            color: pb.hovered ? "#400078d4" : "#26ffffff"
+            border.color: "#33ffffff"
+            border.width: 1
+        }
+        contentItem: QQC2.Label {
+            text: pb.text
+            font: pb.font
+            color: root.novaText
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
         }
     }
 
@@ -250,8 +277,8 @@ Rectangle {
 
     Component.onCompleted: {
         var locale = Qt.locale("fr_FR")
-        timeLabel.text = Qt.formatDateTime(new Date(), "HH:mm", locale)
-        dateLabel.text = Qt.formatDateTime(new Date(), "dddd d MMMM yyyy", locale)
+        timeLabel.text = new Date().toLocaleTimeString(locale, "HH:mm")
+        dateLabel.text = new Date().toLocaleDateString(locale, "dddd d MMMM yyyy")
         if (userName.text.length > 0) {
             password.forceActiveFocus()
         } else {

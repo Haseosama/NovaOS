@@ -35,8 +35,26 @@ fi
 primary_user="$(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 && $7 !~ /(nologin|false)$/ { print $1; exit }')"
 [ -n "$primary_user" ] || exit 0
 
-# Session Plasma (Wayland par défaut sur Plasma 6)
-session="plasma.desktop"
+# Session Plasma (Wayland par défaut sur Plasma 6, sinon X11) : on ne
+# retient qu'un fichier de session qui existe vraiment, sinon SDDM ignore
+# la connexion automatique et affiche l'écran de connexion.
+session=""
+for f in /usr/share/wayland-sessions/plasma.desktop \
+         /usr/share/xsessions/plasmax11.desktop \
+         /usr/share/xsessions/plasma.desktop; do
+    if [ -f "$f" ]; then
+        session="$(basename "$f")"
+        break
+    fi
+done
+[ -n "$session" ] || exit 0
+
+# /etc/sddm.conf (écrit par live-config en session live) a la PRIORITÉ sur
+# /etc/sddm.conf.d/ : on y retire son bloc [Autologin] pour que le nôtre
+# s'applique.
+if [ -f /etc/sddm.conf ] && grep -q '^\[Autologin\]' /etc/sddm.conf; then
+    sed -i '/^\[Autologin\]/,/^\[/{ /^\[Autologin\]/d; /^\[/!d; }' /etc/sddm.conf
+fi
 
 cat > "$CONF_FILE" <<EOF
 # Généré par NovaOS — connexion automatique sur le bureau
