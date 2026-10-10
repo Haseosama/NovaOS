@@ -18,28 +18,27 @@ apt_retry() {
     return 1
 }
 
-# --- Media Player Classic : mpc-qt (clone Linux de MPC-HC), lecteur vidéo par défaut ---
-# Pas de paquet Debian : on prend l'AppImage officielle (GitHub mpc-qt), extraite
-# dans /opt/mpc-qt (pas besoin de FUSE).
+# --- Media Player Classic : mpc-qt (clone Linux de MPC-HC), lecteur vidéo et musique par défaut ---
+# Pas de paquet Debian et pas d'AppImage pour toutes les versions : on essaie
+# 1) le paquet, 2) une AppImage de la dernière version, 3) la compilation des
+# sources de la dernière version (outils de compilation retirés ensuite).
 MPC_DESKTOP=""
+MPC_EXEC=""
+MPC_ICON=""
 if apt_retry install -y mpc-qt >/dev/null 2>&1; then
     MPC_DESKTOP="$(grep -l -i -E '^Exec=.*mpc-qt' /usr/share/applications/*.desktop 2>/dev/null | head -n1)"
-else
-    # 1) API GitHub (peut être limitée depuis les machines de build partagées)
-    url="$(curl -fsSL --retry 3 https://api.github.com/repos/mpc-qt/mpc-qt/releases/latest 2>/dev/null \
-        | grep -o '"browser_download_url": *"[^"]*\.AppImage"' | grep -i -E 'x86_64|amd64' | head -n1 | sed 's/.*"\(https[^"]*\)"/\1/')"
-    # 2) sinon la page des versions de github.com (liste des fichiers)
-    if [ -z "$url" ]; then
-        tag="$(curl -fsSIL --retry 3 -o /dev/null -w '%{url_effective}' https://github.com/mpc-qt/mpc-qt/releases/latest 2>/dev/null | sed 's#.*/tag/##')"
-        echo "[novaos] mpc-qt : API GitHub indisponible, version trouvée par la page : ${tag:-aucune}"
-        if [ -n "$tag" ]; then
-            path="$(curl -fsSL --retry 3 "https://github.com/mpc-qt/mpc-qt/releases/expanded_assets/$tag" 2>/dev/null \
-                | grep -o 'href="[^"]*\.AppImage"' | grep -i -E 'x86_64|amd64' | head -n1 | sed 's/href="\([^"]*\)"/\1/')"
-            [ -n "$path" ] && url="https://github.com$path"
-        fi
-    fi
-    echo "[novaos] mpc-qt : AppImage = ${url:-introuvable}"
-    if [ -n "$url" ] && curl -fsSL --retry 3 -o /tmp/mpc-qt.AppImage "$url"; then
+fi
+
+# Dernière version publiée (page github.com, l'API pouvant être limitée)
+mpc_tag="$(curl -fsSIL --retry 3 -o /dev/null -w '%{url_effective}' https://github.com/mpc-qt/mpc-qt/releases/latest 2>/dev/null | sed -n 's#.*/tag/##p')"
+echo "[novaos] mpc-qt : dernière version ${mpc_tag:-introuvable}"
+
+if [ -z "$MPC_DESKTOP" ] && [ -n "$mpc_tag" ]; then
+    assets="$(curl -fsSL --retry 3 "https://github.com/mpc-qt/mpc-qt/releases/expanded_assets/$mpc_tag" 2>/dev/null \
+        | grep -o 'href="[^"]*/releases/download/[^"]*"' | sed 's/href="\([^"]*\)"/\1/')"
+    echo "[novaos] mpc-qt : fichiers publiés : $(echo "$assets" | sed 's#.*/##' | tr '\n' ' ')"
+    path="$(echo "$assets" | grep -i '\.AppImage$' | grep -i -E 'x86_64|amd64' | head -n1)"
+    if [ -n "$path" ] && curl -fsSL --retry 3 -o /tmp/mpc-qt.AppImage "https://github.com$path"; then
         chmod +x /tmp/mpc-qt.AppImage
         rm -rf /opt/mpc-qt /tmp/squashfs-root
         if (cd /tmp && ./mpc-qt.AppImage --appimage-extract >/dev/null 2>/tmp/mpc-extract.log) && [ -x /tmp/squashfs-root/AppRun ]; then
@@ -47,24 +46,86 @@ else
             chmod -R a+rX /opt/mpc-qt
             printf '#!/bin/sh\nexec /opt/mpc-qt/AppRun "$@"\n' > /usr/local/bin/mpc-qt
             chmod +x /usr/local/bin/mpc-qt
-            icon="$(find /opt/mpc-qt -maxdepth 1 \( -name '*.png' -o -name '*.svg' \) | head -n1)"
-            cat > /usr/share/applications/novaos-mpc-qt.desktop <<DESK
+            MPC_EXEC=/usr/local/bin/mpc-qt
+            MPC_ICON="$(find /opt/mpc-qt -maxdepth 1 \( -name '*.png' -o -name '*.svg' \) | head -n1)"
+            echo "[novaos] mpc-qt : AppImage installée"
+        else
+            echo "[novaos] mpc-qt : extraction de l'AppImage impossible : $(tail -n2 /tmp/mpc-extract.log 2>/dev/null)" >&2
+        fi
+        rm -f /tmp/mpc-qt.AppImage /tmp/mpc-extract.log; rm -rf /tmp/squashfs-root
+    fi
+fi
+
+if [ -z "$MPC_DESKTOP" ] && [ -z "$MPC_EXEC" ] && [ -n "$mpc_tag" ]; then
+    echo "[novaos] mpc-qt : compilation des sources $mpc_tag"
+    dpkg-query -W -f '${Package}\n' | sort > /tmp/pkgs-before
+    BUILD_DEPS="build-essential cmake ninja-build pkg-config qt6-base-dev qt6-base-private-dev qt6-tools-dev qt6-tools-dev-tools qt6-l10n-tools qt6-svg-dev libqt6opengl6-dev libgl-dev libmpv-dev"
+    avail=""
+    for p in $BUILD_DEPS; do apt-cache show "$p" >/dev/null 2>&1 && avail="$avail $p"; done
+    rm -rf /tmp/mpc-src && mkdir -p /tmp/mpc-src
+    if apt_retry install -y --no-install-recommends $avail >/tmp/mpc-build.log 2>&1 \
+       && curl -fsSL --retry 3 "https://github.com/mpc-qt/mpc-qt/archive/refs/tags/$mpc_tag.tar.gz" \
+          | tar -xz -C /tmp/mpc-src --strip-components=1; then
+        cd /tmp/mpc-src
+        ok=0
+        if [ -f CMakeLists.txt ]; then
+            cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/mpc-qt >>/tmp/mpc-build.log 2>&1 \
+              && cmake --build build -j"$(nproc)" >>/tmp/mpc-build.log 2>&1 \
+              && cmake --install build >>/tmp/mpc-build.log 2>&1 && ok=1
+        elif ls ./*.pro >/dev/null 2>&1; then
+            QMAKE="$(command -v qmake6 || ls /usr/lib/qt6/bin/qmake 2>/dev/null)"
+            "$QMAKE" PREFIX=/opt/mpc-qt >>/tmp/mpc-build.log 2>&1 \
+              && make -j"$(nproc)" >>/tmp/mpc-build.log 2>&1 \
+              && make install INSTALL_ROOT= >>/tmp/mpc-build.log 2>&1 && ok=1
+        fi
+        cd /
+        bin="$(find /opt/mpc-qt -type f -name mpc-qt -perm -u+x 2>/dev/null | head -n1)"
+        if [ "$ok" = 1 ] && [ -n "$bin" ]; then
+            # garder les bibliothèques dont le lecteur a besoin
+            for lib in $(ldd "$bin" | awk '/=> \//{print $3}'); do
+                pkg="$(dpkg -S "$(readlink -f "$lib")" 2>/dev/null | head -n1 | cut -d: -f1)"
+                [ -n "$pkg" ] && apt-mark manual "$pkg" >/dev/null 2>&1 || true
+            done
+            printf '#!/bin/sh\nexec %s "$@"\n' "$bin" > /usr/local/bin/mpc-qt
+            chmod +x /usr/local/bin/mpc-qt
+            MPC_EXEC=/usr/local/bin/mpc-qt
+            MPC_ICON="$(find /opt/mpc-qt -path '*icons*' -name '*mpc-qt*.svg' 2>/dev/null | head -n1)"
+            [ -n "$MPC_ICON" ] || MPC_ICON="$(find /opt/mpc-qt /tmp/mpc-src -name '*.svg' -path '*icon*' 2>/dev/null | head -n1)"
+            if [ -n "$MPC_ICON" ] && [ "${MPC_ICON#/tmp}" != "$MPC_ICON" ]; then
+                install -Dm644 "$MPC_ICON" /opt/mpc-qt/mpc-qt.svg; MPC_ICON=/opt/mpc-qt/mpc-qt.svg
+            fi
+            echo "[novaos] mpc-qt : compilé et installé dans /opt/mpc-qt"
+        else
+            echo "[novaos] mpc-qt : échec de la compilation : $(tail -n5 /tmp/mpc-build.log | tr '\n' ' ')" >&2
+            rm -rf /opt/mpc-qt
+        fi
+    else
+        echo "[novaos] mpc-qt : outils ou sources indisponibles : $(tail -n3 /tmp/mpc-build.log | tr '\n' ' ')" >&2
+    fi
+    # retirer les outils de compilation installés pour l'occasion
+    dpkg-query -W -f '${Package}\n' | sort > /tmp/pkgs-after
+    newpkgs="$(comm -13 /tmp/pkgs-before /tmp/pkgs-after | grep -E -- '-dev$|^build-essential$|^cmake|^ninja-build$|^qt6-.*-tools|^qt6-l10n-tools$|^g\+\+|^gcc|^cpp|^make$|^dpkg-dev$' || true)"
+    [ -n "$newpkgs" ] && apt-get purge -y $newpkgs >/dev/null 2>&1 || true
+    apt-get autoremove -y >/dev/null 2>&1 || true
+    rm -rf /tmp/mpc-src /tmp/mpc-build.log /tmp/pkgs-before /tmp/pkgs-after
+fi
+
+if [ -z "$MPC_DESKTOP" ] && [ -n "$MPC_EXEC" ]; then
+    cat > /usr/share/applications/novaos-mpc-qt.desktop <<DESK
 [Desktop Entry]
 Type=Application
 Name=Media Player Classic (mpc-qt)
 GenericName=Lecteur multimédia
 Comment=Lecteur vidéo et musique façon Media Player Classic
-Exec=/usr/local/bin/mpc-qt %F
-Icon=${icon:-multimedia-video-player}
+Exec=$MPC_EXEC %F
+Icon=${MPC_ICON:-multimedia-video-player}
 Terminal=false
 Categories=AudioVideo;Video;Audio;Player;
 MimeType=video/mp4;video/x-matroska;video/webm;video/x-msvideo;video/avi;video/quicktime;video/mpeg;video/x-flv;video/ogg;video/3gpp;video/x-ms-wmv;video/mp2t;video/x-m4v;audio/mpeg;audio/mp3;audio/flac;audio/x-flac;audio/mp4;audio/x-m4a;audio/aac;audio/ogg;audio/x-vorbis+ogg;audio/opus;audio/wav;audio/x-wav;audio/x-ms-wma;audio/x-matroska;audio/webm;
 DESK
-            MPC_DESKTOP=/usr/share/applications/novaos-mpc-qt.desktop
-        fi
-        [ -n "$MPC_DESKTOP" ] || echo "[novaos] mpc-qt : extraction de l'AppImage impossible : $(tail -n2 /tmp/mpc-extract.log 2>/dev/null)" >&2
-        rm -f /tmp/mpc-qt.AppImage /tmp/mpc-extract.log; rm -rf /tmp/squashfs-root
-    fi
+    MPC_DESKTOP=/usr/share/applications/novaos-mpc-qt.desktop
+    # le lanceur installé par les sources ferait doublon
+    rm -f /opt/mpc-qt/share/applications/*.desktop 2>/dev/null || true
 fi
 if [ -n "$MPC_DESKTOP" ]; then
     MPC_ID="$(basename "$MPC_DESKTOP")"
