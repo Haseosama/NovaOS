@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NovaOS — programmes Windows
+Comment=Installe les programmes Windows fournis avec NovaOS (XMedia Recode…)
+Exec=/usr/local/bin/novaos-windows-apps-setup
+Terminal=false
+NoDisplay=true
+X-KDE-autostart-phase=2

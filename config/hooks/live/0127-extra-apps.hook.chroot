@@ -1,0 +1,61 @@
+#!/bin/bash
+#
+# NovaOS — hook live-build : applications demandées en plus
+#   • Brave (dépôt officiel Brave, mises à jour via apt)
+#   • JDownloader 2 (JDownloader.jar officiel, lancé avec Java)
+#   • XMedia Recode (installateur Windows officiel, installé via Wine à la
+#     première session, comme les autres .exe de /usr/share/novaos/windows-apps)
+# Chaque étape est facultative : un échec réseau n'arrête pas la construction.
+#
+set -u
+
+apt_retry() {
+    local i
+    for i in 1 2 3; do
+        DEBIAN_FRONTEND=noninteractive apt-get "$@" && return 0
+        sleep 5
+    done
+    return 1
+}
+
+# --- Brave ---
+KEYRING=/usr/share/keyrings/brave-browser-archive-keyring.gpg
+if curl -fsSL --retry 3 -o "$KEYRING" \
+        https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg; then
+    echo "deb [signed-by=$KEYRING arch=amd64] https://brave-browser-apt-release.s3.brave.com/ stable main" \
+        > /etc/apt/sources.list.d/brave-browser-release.list
+    if apt_retry update -qq >/dev/null 2>&1 && apt_retry install -y brave-browser >/dev/null 2>&1; then
+        echo "[novaos] Brave installé ($(dpkg-query -W -f='${Version}' brave-browser 2>/dev/null))"
+    else
+        echo "[novaos] AVERTISSEMENT : installation de Brave impossible" >&2
+    fi
+else
+    echo "[novaos] AVERTISSEMENT : clé du dépôt Brave inaccessible" >&2
+fi
+
+# --- JDownloader 2 ---
+mkdir -p /opt/jdownloader
+if curl -fsSL --retry 3 -o /opt/jdownloader/JDownloader.jar http://installer.jdownloader.org/JDownloader.jar \
+   && [ -s /opt/jdownloader/JDownloader.jar ]; then
+    echo "[novaos] JDownloader 2 téléchargé"
+else
+    rm -rf /opt/jdownloader
+    rm -f /usr/share/applications/novaos-jdownloader.desktop
+    echo "[novaos] AVERTISSEMENT : JDownloader 2 inaccessible" >&2
+fi
+
+# --- XMedia Recode (installateur Windows officiel) ---
+WINAPPS=/usr/share/novaos/windows-apps
+mkdir -p "$WINAPPS"
+page="$(curl -fsSL --retry 3 https://www.xmedia-recode.de/en/download.php 2>/dev/null || true)"
+file="$(echo "$page" | grep -o -E 'XMediaRecode[0-9.]+_setup\.exe' | head -n1)"
+if [ -n "$file" ] && curl -fsSL --retry 3 -o "$WINAPPS/$file" "https://www.xmedia-recode.de/download/$file" \
+   && [ -s "$WINAPPS/$file" ]; then
+    echo "[novaos] XMedia Recode : $file prêt pour l'installation via Wine"
+else
+    rm -f "$WINAPPS/$file" 2>/dev/null || true
+    echo "[novaos] AVERTISSEMENT : XMedia Recode inaccessible" >&2
+fi
+ls "$WINAPPS"/*.exe >/dev/null 2>&1 && echo "[novaos] applications Windows à installer : $(cd "$WINAPPS" && ls *.exe | tr '\n' ' ')"
+
+exit 0

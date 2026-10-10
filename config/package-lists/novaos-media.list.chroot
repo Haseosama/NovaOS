@@ -1,0 +1,26 @@
+# NovaOS — multimédia (équivalent Linux du K-Lite Codec Pack Mega)
+# Tous les formats audio/vidéo courants dans toutes les applications.
+ffmpeg
+libavcodec-extra
+gstreamer1.0-plugins-good
+gstreamer1.0-plugins-bad
+gstreamer1.0-plugins-ugly
+gstreamer1.0-libav
+gstreamer1.0-vaapi
+x264
+x265
+lame
+flac
+libdvdnav4
+mediainfo-gui
+
+# MKVToolNix (natif Linux)
+mkvtoolnix
+mkvtoolnix-gui
+
+# Conversion vidéo native (en plus de XMedia Recode via Wine)
+handbrake
+
+# JDownloader 2 (Java)
+default-jre
+libnotify-bin
