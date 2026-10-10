@@ -52,13 +52,13 @@ else
 [Desktop Entry]
 Type=Application
 Name=Media Player Classic (mpc-qt)
-GenericName=Lecteur vidéo
-Comment=Lecteur vidéo façon Media Player Classic
+GenericName=Lecteur multimédia
+Comment=Lecteur vidéo et musique façon Media Player Classic
 Exec=/usr/local/bin/mpc-qt %F
 Icon=${icon:-multimedia-video-player}
 Terminal=false
-Categories=AudioVideo;Video;Player;
-MimeType=video/mp4;video/x-matroska;video/webm;video/x-msvideo;video/avi;video/quicktime;video/mpeg;video/x-flv;video/ogg;video/3gpp;video/x-ms-wmv;video/mp2t;video/x-m4v;
+Categories=AudioVideo;Video;Audio;Player;
+MimeType=video/mp4;video/x-matroska;video/webm;video/x-msvideo;video/avi;video/quicktime;video/mpeg;video/x-flv;video/ogg;video/3gpp;video/x-ms-wmv;video/mp2t;video/x-m4v;audio/mpeg;audio/mp3;audio/flac;audio/x-flac;audio/mp4;audio/x-m4a;audio/aac;audio/ogg;audio/x-vorbis+ogg;audio/opus;audio/wav;audio/x-wav;audio/x-ms-wma;audio/x-matroska;audio/webm;
 DESK
             MPC_DESKTOP=/usr/share/applications/novaos-mpc-qt.desktop
         fi
@@ -68,7 +68,7 @@ DESK
 fi
 if [ -n "$MPC_DESKTOP" ]; then
     MPC_ID="$(basename "$MPC_DESKTOP")"
-    MIMES="video/mp4 video/x-matroska video/webm video/x-msvideo video/avi video/quicktime video/mpeg video/x-flv video/ogg video/3gpp video/x-ms-wmv video/mp2t video/x-m4v"
+    MIMES="video/mp4 video/x-matroska video/webm video/x-msvideo video/avi video/quicktime video/mpeg video/x-flv video/ogg video/3gpp video/x-ms-wmv video/mp2t video/x-m4v audio/mpeg audio/mp3 audio/flac audio/x-flac audio/mp4 audio/x-m4a audio/aac audio/ogg audio/x-vorbis+ogg audio/opus audio/wav audio/x-wav audio/x-ms-wma audio/x-matroska audio/webm"
     python3 - "$MPC_ID" $MIMES <<'PY' || true
 import sys, configparser
 mid, mimes = sys.argv[1], sys.argv[2:]
@@ -82,7 +82,7 @@ for m in mimes:
     c.set("Added Associations", m, mid + ";")
 with open(p, "w") as f: c.write(f, space_around_delimiters=False)
 PY
-    echo "[novaos] Media Player Classic (mpc-qt) installé, lecteur vidéo par défaut ($MPC_ID)"
+    echo "[novaos] Media Player Classic (mpc-qt) installé, lecteur vidéo et musique par défaut ($MPC_ID)"
 else
     echo "[novaos] AVERTISSEMENT : mpc-qt indisponible, VLC reste le lecteur vidéo" >&2
 fi
