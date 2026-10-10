@@ -66,4 +66,19 @@ apt-get clean
 rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* 2>/dev/null || true
 mkdir -p /var/lib/apt/lists/partial
 
+# --- Pas de fenêtre « Bienvenue dans KDE Plasma » au lancement ---
+# (NovaOS a son propre message de bienvenue : novaos-welcome)
+# Désactivation par fichier masqué (sans désinstaller : des métapaquets KDE
+# en dépendent). ~/.config/autostart n'est pas utilisé : /etc/xdg/autostart
+# est remplacé à l'identique et dpkg-divert protège des mises à jour.
+for f in /etc/xdg/autostart/*welcome*.desktop; do
+    [ -e "$f" ] || continue
+    case "$f" in */novaos-welcome.desktop) continue ;; esac
+    if grep -qi 'plasma-welcome' "$f"; then
+        dpkg-divert --quiet --local --rename --add "$f" 2>/dev/null || rm -f "$f"
+        printf '[Desktop Entry]\nType=Application\nName=Plasma Welcome\nExec=plasma-welcome\nHidden=true\n' > "$f"
+    fi
+done
+echo "[novaos] plasma-welcome retiré"
+
 exit 0

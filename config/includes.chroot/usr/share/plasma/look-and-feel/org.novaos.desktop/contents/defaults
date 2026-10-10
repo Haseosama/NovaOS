@@ -18,4 +18,5 @@ library=org.kde.breeze
 theme=Breeze
 
 [KSplash]
-Theme=org.kde.breeze.desktop
+Engine=KSplashQML
+Theme=org.novaos.desktop

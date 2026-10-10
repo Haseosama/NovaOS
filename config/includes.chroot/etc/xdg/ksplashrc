@@ -1,0 +1,4 @@
+# NovaOS — écran de chargement de session NovaOS (au lieu du logo KDE)
+[KSplash]
+Engine=KSplashQML
+Theme=org.novaos.desktop
