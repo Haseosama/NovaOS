@@ -1,0 +1,54 @@
+#!/bin/bash
+#
+# NovaOS — fluidité selon la carte graphique (à chaque ouverture de session)
+#
+# Sans accélération 3D (VM sans « Accélérer les graphismes 3D », pilote
+# logiciel llvmpipe), le flou du verre est calculé par le processeur et
+# tout rame. Dans ce cas on coupe le flou et la transparence animée et on
+# raccourcit les animations. Dès que la 3D revient, NovaOS remet le verre.
+#
+set -u
+
+KWC="$(command -v kwriteconfig6 || true)"
+QDBUS="$(command -v qdbus6 || command -v qdbus || true)"
+[ -n "$KWC" ] && [ -n "$QDBUS" ] || exit 0
+
+MARKER="$HOME/.config/novaos/perf-reduced"
+mkdir -p "$(dirname "$MARKER")"
+
+# Laisse KWin démarrer
+for _ in $(seq 1 20); do
+    info="$("$QDBUS" org.kde.KWin /KWin supportInformation 2>/dev/null)" && [ -n "$info" ] && break
+    sleep 1
+done
+[ -n "${info:-}" ] || exit 0
+
+renderer="$(echo "$info" | grep -i -m1 "OpenGL renderer string" | cut -d: -f2-)"
+software=false
+if echo "$renderer" | grep -qi -E "llvmpipe|softpipe|software"; then
+    software=true
+elif ! echo "$info" | grep -qi "OpenGL renderer"; then
+    # Compositage QPainter (aucun OpenGL)
+    software=true
+fi
+
+set_effects() { # $1 = true/false
+    "$KWC" --file kwinrc --group Plugins --key blurEnabled "$1"
+    "$KWC" --file kwinrc --group Plugins --key contrastEnabled "$1"
+    "$KWC" --file kwinrc --group Plugins --key translucencyEnabled "$1"
+}
+
+if $software; then
+    if [ ! -f "$MARKER" ]; then
+        set_effects false
+        "$KWC" --file kdeglobals --group KDE --key AnimationDurationFactor 0.5
+        echo "$renderer" > "$MARKER"
+        "$QDBUS" org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
+    fi
+elif [ -f "$MARKER" ]; then
+    set_effects true
+    "$KWC" --file kdeglobals --group KDE --key AnimationDurationFactor 0.7
+    rm -f "$MARKER"
+    "$QDBUS" org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
+fi
+exit 0

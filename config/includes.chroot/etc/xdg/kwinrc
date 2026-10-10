@@ -10,10 +10,20 @@ blurEnabled=true
 magiclampEnabled=true
 # Fenêtres légèrement translucides pendant leur déplacement
 translucencyEnabled=true
+# Ouverture / fermeture des fenêtres : glissement en perspective (futuriste)
+glideEnabled=true
+scaleEnabled=false
+# Contraste derrière le verre (lisibilité du texte sur fond flouté)
+contrastEnabled=true
 
 [Effect-blur]
 BlurStrength=15
 NoiseStrength=6
+
+[Effect-glide]
+Duration=220
+OpenEffect=0
+CloseEffect=1
 
 [Effect-translucency]
 MoveResize=85

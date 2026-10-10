@@ -5,7 +5,6 @@
 [General]
 ColorScheme=NovaOS-Dark
 Name=NovaOS Dark
-AccentColor=0,120,212
 shadeSortColumn=true
 font=Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
 menuFont=Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
@@ -67,8 +66,8 @@ ForegroundNegative=218,68,83,255
 ForegroundNeutral=246,116,0,255
 ForegroundPositive=39,174,96,255
 ForegroundVisited=127,140,141,255
-DecorationFocus=0,120,212,255
-DecorationHover=61,174,233,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255
 
 [Colors:Complementary]
 BackgroundNormal=35,38,41,255
@@ -79,8 +78,8 @@ ForegroundNegative=218,68,83,255
 ForegroundNeutral=246,116,0,255
 ForegroundPositive=39,174,96,255
 ForegroundVisited=127,140,141,255
-DecorationFocus=0,120,212,255
-DecorationHover=61,174,233,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255
 
 [Colors:Selection]
 BackgroundNormal=0,120,212,255
@@ -91,8 +90,8 @@ ForegroundNegative=218,68,83,255
 ForegroundNeutral=246,116,0,255
 ForegroundPositive=39,174,96,255
 ForegroundVisited=127,140,141,255
-DecorationFocus=0,120,212,255
-DecorationHover=61,174,233,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255
 
 [Colors:Tooltip]
 BackgroundNormal=35,38,41,255
@@ -103,8 +102,8 @@ ForegroundNegative=218,68,83,255
 ForegroundNeutral=246,116,0,255
 ForegroundPositive=39,174,96,255
 ForegroundVisited=127,140,141,255
-DecorationFocus=0,120,212,255
-DecorationHover=61,174,233,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255
 
 [Colors:View]
 BackgroundNormal=35,38,41,255
@@ -115,8 +114,8 @@ ForegroundNegative=218,68,83,255
 ForegroundNeutral=246,116,0,255
 ForegroundPositive=39,174,96,255
 ForegroundVisited=127,140,141,255
-DecorationFocus=0,120,212,255
-DecorationHover=61,174,233,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255
 
 [Colors:Window]
 BackgroundNormal=24,28,40,255
@@ -127,5 +126,5 @@ ForegroundNegative=218,68,83,255
 ForegroundNeutral=246,116,0,255
 ForegroundPositive=39,174,96,255
 ForegroundVisited=127,140,141,255
-DecorationFocus=0,120,212,255
-DecorationHover=61,174,233,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255

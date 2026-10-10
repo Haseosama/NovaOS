@@ -73,12 +73,36 @@ function novaCreatePanel() {
     print("NovaOS: barre des tâches créée");
 }
 
+// Widgets du bureau (en haut à droite, style verre du thème NovaGlass) :
+// grande horloge, processeur, mémoire. Ajoutés seulement avec une barre neuve.
+function novaDesktopWidgets() {
+    var ds = [];
+    novaTry("bureaux", function () { ds = desktops(); });
+    if (ds.length === 0) { return; }
+    var d = ds[0];
+    var sw = 1920;
+    novaTry("taille d'écran", function () {
+        var g = screenGeometry(d.screen);
+        if (g && g.width > 0) { sw = g.width; }
+    });
+    var w = 300, x = sw - w - 32;
+    novaTry("horloge du bureau", function () {
+        var c = d.addWidget("org.kde.plasma.digitalclock", x, 40, w, 150);
+        c.currentConfigGroup = ["Appearance"];
+        c.writeConfig("showDate", true);
+        c.writeConfig("dateDisplayFormat", "BelowTime");
+    });
+    novaTry("processeur", function () { d.addWidget("org.kde.plasma.systemmonitor.cpu", x, 210, w, 190); });
+    novaTry("mémoire", function () { d.addWidget("org.kde.plasma.systemmonitor.memory", x, 420, w, 190); });
+}
+
 // Une barre existe déjà ? On n'y touche pas (l'utilisateur l'a peut-être
 // personnalisée). Sinon on la crée.
 var novaPanels = [];
 novaTry("liste des barres", function () { novaPanels = panels(); });
 if (novaPanels.length === 0) {
     novaCreatePanel();
+    novaDesktopWidgets();
 } else {
     print("NovaOS: " + novaPanels.length + " barre(s) déjà présente(s)");
 }
