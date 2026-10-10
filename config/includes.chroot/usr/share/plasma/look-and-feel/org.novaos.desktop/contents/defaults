@@ -2,7 +2,7 @@
 ColorScheme=NovaOS-Dark
 
 [kdeglobals][Icons]
-Theme=Papirus-Dark
+Theme=NovaOS
 
 [kdeglobals][KDE]
 widgetStyle=Breeze

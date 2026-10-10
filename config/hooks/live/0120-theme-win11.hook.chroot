@@ -60,6 +60,56 @@ else
     echo "[novaos] AVERTISSEMENT : moteur Aurorae introuvable, décoration Breeze conservée" >&2
 fi
 
+# --- Pack d'icônes « NovaOS » : icônes néon NovaOS + dossiers cyan ---
+# Base Papirus sombre ; les icônes de dossiers bleues sont redirigées vers
+# leurs variantes cyan de Papirus, et quelques icônes clés (Ce PC, explorateur,
+# corbeille, terminal, paramètres, menu Démarrer) sont dessinées pour NovaOS.
+NOVA_ICONS=/usr/share/icons/NovaOS
+if [ -d /usr/share/icons/Papirus ] || [ -d /usr/share/icons/Papirus-Dark ]; then
+    for theme in Papirus-Dark Papirus; do
+        for dir in /usr/share/icons/$theme/*/places; do
+            [ -d "$dir" ] || continue
+            size="$(basename "$(dirname "$dir")")"
+            mkdir -p "$NOVA_ICONS/$size/places"
+            for f in "$dir"/*.svg; do
+                [ -L "$f" ] || continue
+                name="$(basename "$f")"
+                [ -e "$NOVA_ICONS/$size/places/$name" ] && continue
+                tgt="$(readlink "$f")"
+                case "$tgt" in *-blue*) ;; *) continue ;; esac
+                cyan="$(echo "$tgt" | sed 's/-blue/-cyan/g')"
+                [ -e "$dir/$cyan" ] || continue
+                ln -s "$dir/$cyan" "$NOVA_ICONS/$size/places/$name"
+            done
+        done
+    done
+fi
+{
+    echo "[Icon Theme]"
+    echo "Name=NovaOS"
+    echo "Comment=Icônes néon NovaOS (base Papirus sombre, dossiers cyan)"
+    echo "Inherits=Papirus-Dark,breeze-dark,hicolor"
+    printf "Directories="
+    (cd "$NOVA_ICONS" && find . -mindepth 2 -maxdepth 2 -type d | sed 's|^\./||' | sort | paste -sd, -)
+    echo
+    (cd "$NOVA_ICONS" && find . -mindepth 2 -maxdepth 2 -type d | sed 's|^\./||' | sort) | while read -r d; do
+        size="${d%%/*}"; ctx="${d#*/}"
+        case "$ctx" in places) C=Places ;; apps) C=Applications ;; devices) C=Devices ;; *) C=Other ;; esac
+        echo
+        echo "[$d]"
+        echo "Context=$C"
+        if [ "$size" = scalable ]; then
+            echo "Size=64"; echo "MinSize=16"; echo "MaxSize=512"; echo "Type=Scalable"
+        else
+            n="${size%%x*}"; n="${n%%@*}"
+            echo "Size=$n"; echo "Type=Fixed"
+            case "$size" in *@2x) echo "Scale=2" ;; esac
+        fi
+    done
+} > "$NOVA_ICONS/index.theme"
+gtk-update-icon-cache -f -q "$NOVA_ICONS" 2>/dev/null || true
+echo "[novaos] pack d'icônes NovaOS : $(find "$NOVA_ICONS" -name '*.svg' | wc -l) icônes"
+
 # --- Applique la configuration bureau aux comptes existants (ex. user live) ---
 # Les comptes créés à l'installation l'obtiennent via /etc/skel.
 if [ -d /etc/skel/.config ]; then

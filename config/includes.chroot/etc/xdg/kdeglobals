@@ -22,7 +22,7 @@ inactiveForeground=150,158,170,255
 activeFont=Inter,10,-1,5,600,0,0,0,0,0,0,0,0,0,0,1
 
 [Icons]
-Theme=Papirus-Dark
+Theme=NovaOS
 
 [KDE]
 LookAndFeelPackage=org.novaos.desktop

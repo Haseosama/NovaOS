@@ -58,7 +58,7 @@ fi
 KWC="$(command -v kwriteconfig6 || command -v kwriteconfig5 || true)"
 if [ -n "$KWC" ]; then
     "$KWC" --file kdeglobals --group KDE --key LookAndFeelPackage org.novaos.desktop
-    "$KWC" --file kdeglobals --group Icons --key Theme Papirus-Dark
+    "$KWC" --file kdeglobals --group Icons --key Theme NovaOS
     if grep -q '^widgetStyle=kvantum' /etc/xdg/kdeglobals 2>/dev/null; then
         "$KWC" --file kdeglobals --group KDE --key widgetStyle kvantum
     fi
