@@ -45,4 +45,21 @@ if ! command -v grub-install >/dev/null 2>&1; then
     || echo "[novaos] AVERTISSEMENT : GRUB n'a pas pu être installé (l'installation devra l'installer)."
 fi
 
+
+# --- Une seule icône d'installation : « Installer NovaOS » ---
+# calamares-settings-debian ajoute « Install Debian » sur le bureau au
+# démarrage (autostart add-calamares-desktop-icon) : on le retire.
+rm -f /etc/xdg/autostart/calamares-desktop-icon.desktop \
+      /etc/xdg/autostart/add-calamares-desktop-icon.desktop
+rm -f /etc/skel/Desktop/install-debian.desktop /home/*/Desktop/install-debian.desktop
+if [ -f /usr/share/applications/install-debian.desktop ]; then
+    grep -q '^NoDisplay=' /usr/share/applications/install-debian.desktop \
+        || sed -i '/^\[Desktop Entry\]/a NoDisplay=true' /usr/share/applications/install-debian.desktop
+fi
+if [ -x /usr/bin/add-calamares-desktop-icon ]; then
+    printf '#!/bin/sh\n# NovaOS : icône « Installer NovaOS » fournie par /etc/skel\nexit 0\n' \
+        > /usr/bin/add-calamares-desktop-icon
+fi
+echo "[novaos] icône « Install Debian » retirée"
+
 exit 0

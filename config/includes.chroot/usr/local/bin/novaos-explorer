@@ -1,0 +1,7 @@
+#!/bin/sh
+# NovaOS — Explorateur de fichiers (Dolphin), ouvert sur le dossier personnel
+# comme l'Explorateur Windows, ou sur le dossier/fichier donné.
+if [ $# -gt 0 ]; then
+    exec dolphin "$@"
+fi
+exec dolphin --new-window "$HOME"
