@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NovaOS — fenêtre de copie
+Comment=Affiche les copies de fichiers avec le graphique de vitesse, comme Windows 11
+Exec=/usr/local/bin/novaos-copy-progress
+Terminal=false
+NoDisplay=true
+X-KDE-autostart-phase=2

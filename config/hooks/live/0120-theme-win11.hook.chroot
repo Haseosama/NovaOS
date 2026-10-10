@@ -49,6 +49,15 @@ else
         /usr/share/plasma/look-and-feel/org.novaos.desktop/contents/layouts/org.kde.plasma.desktop-layout.js
 fi
 
+# --- Fenêtre de copie avec graphique de vitesse (novaos-copy-progress) ---
+if python3 -c 'import PyQt6.QtWidgets' 2>/dev/null && command -v dbus-monitor >/dev/null; then
+    echo "[novaos] fenêtre de copie NovaOS (graphique de vitesse) activée"
+else
+    echo "[novaos] AVERTISSEMENT : PyQt6 ou dbus-monitor absent : fenêtre de copie NovaOS retirée" >&2
+    rm -f /etc/xdg/autostart/novaos-copy-progress.desktop
+    sed -i 's/^PermanentPopups=false/PermanentPopups=true/' /etc/xdg/plasmanotifyrc
+fi
+
 # --- Décoration de fenêtres NovaOS (moteur Aurorae de KWin) ---
 # Sans le moteur Aurorae, on garde Breeze (sombre translucide).
 if find /usr/lib -name '*aurorae*.so' 2>/dev/null | grep -q .; then

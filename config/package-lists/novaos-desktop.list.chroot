@@ -65,3 +65,5 @@ qml6-module-qtquick-layouts
 qml6-module-qtquick-window
 zram-tools
 ksystemstats
+python3-pyqt6
+dbus-bin
