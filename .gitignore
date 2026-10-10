@@ -31,3 +31,4 @@ config/build
 
 # Génération d'images (candidats non retenus)
 Unselected files/
+__pycache__/
