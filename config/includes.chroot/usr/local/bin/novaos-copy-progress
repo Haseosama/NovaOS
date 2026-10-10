@@ -9,12 +9,18 @@
 #   - la courbe du débit qui se remplit derrière la progression, avec
 #     « Vitesse : 85,3 Mo/s » sur la ligne de vitesse actuelle ;
 #   - le nom du fichier en cours, le temps restant et les éléments restants.
-# L'annulation et la pause restent dans la notification de Plasma.
+# Boutons Pause / Reprendre / Arrêter : la copie est faite par un processus
+# « kioworker » de KIO ; on retrouve celui qui a un fichier ouvert dans la
+# source ou la destination et on le suspend (SIGSTOP), le relance (SIGCONT) ou
+# l'arrête (SIGTERM). La notification de Plasma garde aussi ses boutons.
 #
 # Test hors session : novaos-copy-progress --replay fichier (sortie de
 # dbus-monitor enregistrée), --screenshot image.png pour une capture.
 
+import os
 import re
+import signal
+from urllib.parse import unquote, urlparse
 import sys
 import time
 
@@ -202,6 +208,13 @@ class CopyWindow(QWidget):
         lay.addWidget(self.remaining)
         lay.addWidget(self.items)
         row = QHBoxLayout()
+        self.pause = QPushButton("Pause")
+        self.stop = QPushButton("Arrêter")
+        self.stop.setStyleSheet("QPushButton { background: rgba(248,113,113,35);"
+                                " border-color: rgba(248,113,113,150); }"
+                                "QPushButton:hover { background: rgba(248,113,113,80); }")
+        row.addWidget(self.pause)
+        row.addWidget(self.stop)
         row.addStretch(1)
         hide = QPushButton("Masquer")
         hide.clicked.connect(self.close)
@@ -236,6 +249,43 @@ class CopyWindow(QWidget):
         super().closeEvent(ev)
 
 
+def local_path(url):
+    if not url:
+        return ""
+    if url.startswith("/"):
+        return url.rstrip("/")
+    u = urlparse(url)
+    return unquote(u.path).rstrip("/") if u.scheme == "file" else ""
+
+
+def find_workers(places):
+    """Processus kioworker de l'utilisateur qui ont un fichier ouvert dans
+    l'un des dossiers donnés (source ou destination de la copie)."""
+    places = [p for p in places if p]
+    found = []
+    uid = os.getuid()
+    for pid in os.listdir("/proc"):
+        if not pid.isdigit():
+            continue
+        try:
+            if os.stat("/proc/" + pid).st_uid != uid:
+                continue
+            argv0 = open("/proc/%s/cmdline" % pid, "rb").read().split(b"\0")[0]
+            if b"kioworker" not in argv0 and b"kioslave" not in argv0:
+                continue
+            for fd in os.listdir("/proc/%s/fd" % pid):
+                try:
+                    target = os.readlink("/proc/%s/fd/%s" % (pid, fd))
+                except OSError:
+                    continue
+                if any(target == p or target.startswith(p + "/") for p in places):
+                    found.append(int(pid))
+                    break
+        except OSError:
+            continue
+    return found
+
+
 class Job:
     def __init__(self, path):
         self.path = path
@@ -246,20 +296,73 @@ class Job:
         self.finished = False
         self.last = None   # (instant, octets copiés) pour calculer la vitesse
         self.speed = 0.0
+        self.paused = False
+        self.pids = []
+        self.note = ""
+
+    def places(self):
+        d = self.data
+        return [local_path(d.get("descriptionValue1", "")),
+                local_path(d.get("descriptionValue2", "") or d.get("destUrl", ""))]
+
+    def signal_workers(self, sig):
+        pids = find_workers(self.places()) or self.pids
+        ok = []
+        for pid in pids:
+            try:
+                os.kill(pid, sig)
+                ok.append(pid)
+            except OSError:
+                pass
+        if ok:
+            self.pids = ok
+        return bool(ok)
+
+    def toggle_pause(self):
+        w = self.window
+        if not self.paused:
+            if self.signal_workers(signal.SIGSTOP):
+                self.paused = True
+                w.pause.setText("Reprendre")
+                self.speed = 0.0
+            else:
+                self.note = "Pause impossible ici : utilisez la notification de Plasma"
+        else:
+            self.signal_workers(signal.SIGCONT)
+            self.paused = False
+            w.pause.setText("Pause")
+            self.last = None
+        self.refresh_now()
+
+    def stop(self):
+        # le processus doit tourner pour recevoir l'arrêt
+        if self.paused:
+            self.signal_workers(signal.SIGCONT)
+        if self.signal_workers(signal.SIGTERM):
+            self.paused = False
+            self.window.percent.setText("Copie arrêtée")
+            self.window.pause.setEnabled(False)
+            self.window.stop.setEnabled(False)
+        else:
+            self.note = "Arrêt impossible ici : utilisez la notification de Plasma"
+
+    def refresh_now(self):
+        if self.window:
+            self.window.graph.add(self.percent(), self.speed)
 
     def update(self, fields):
         self.data.update(fields)
         d = self.data
         done = d.get("processedBytes")
         now = time.monotonic()
-        if done is not None:
+        if done is not None and not self.paused:
             if self.last and now - self.last[0] >= 0.5:
                 inst = (done - self.last[1]) / (now - self.last[0])
                 self.speed = inst if not self.speed else 0.6 * self.speed + 0.4 * inst
                 self.last = (now, done)
             elif not self.last:
                 self.last = (now, done)
-        if d.get("speed"):
+        if d.get("speed") and not self.paused:
             self.speed = float(d["speed"])
 
     def percent(self):
@@ -275,6 +378,8 @@ class Job:
             if time.monotonic() - self.start < SHOW_DELAY:
                 return
             self.window = CopyWindow(self.closed)
+            self.window.pause.clicked.connect(self.toggle_pause)
+            self.window.stop.clicked.connect(self.stop)
             self.window.show()
             app.place_windows()
         d = self.data
@@ -293,7 +398,7 @@ class Job:
             title += " vers <b>%s</b>" % short_place(dst)
         w.title.setText(title)
         pc = self.percent()
-        w.percent.setText("%d %% terminé" % pc)
+        w.percent.setText(("%d %% terminé" % pc) + ("  —  en pause" if self.paused else ""))
         w.setWindowTitle("%d %% terminé — %s" % (pc, verb))
         w.graph.add(pc, self.speed)
         name = d.get("infoMessage", "")
@@ -301,7 +406,11 @@ class Job:
             name = short_place(src)
         w.name.setText("Nom : " + name if name else "")
         tb, pb = d.get("totalBytes"), d.get("processedBytes")
-        if tb and pb is not None and self.speed > 0:
+        if self.note:
+            w.remaining.setText(self.note)
+        elif self.paused:
+            w.remaining.setText("Temps restant : copie en pause")
+        elif tb and pb is not None and self.speed > 0:
             w.remaining.setText("Temps restant : " + human_time((tb - pb) / self.speed))
         else:
             w.remaining.setText("Temps restant : calcul en cours…")
@@ -317,6 +426,8 @@ class Job:
         w = self.window
         if w is None:
             return
+        w.pause.setEnabled(False)
+        w.stop.setEnabled(False)
         if error:
             w.percent.setText("Interrompu")
         else:
