@@ -1,0 +1,6 @@
+# NovaOS — miniatures vidéo : la jaquette intégrée (pièce jointe « cover »
+# d'un MKV, pochette d'un MP4) est utilisée en priorité, sinon une image du film
+[General]
+PreferEmbeddedMetadata=true
+filmstrip=false
+sequenceSeekPercent=20

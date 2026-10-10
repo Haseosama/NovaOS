@@ -128,3 +128,10 @@ ForegroundPositive=39,174,96,255
 ForegroundVisited=127,140,141,255
 DecorationFocus=0,190,255,255
 DecorationHover=0,229,255,255
+
+# Miniatures de l'explorateur : aussi pour les gros fichiers (films de
+# plusieurs Go) et les disques réseau / clés USB
+[PreviewSettings]
+MaximumSize=107374182400
+MaximumRemoteSize=10737418240
+EnableRemoteFolderThumbnail=true

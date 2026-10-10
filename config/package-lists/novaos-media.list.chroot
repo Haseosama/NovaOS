@@ -24,3 +24,9 @@ handbrake
 # JDownloader 2 (Java)
 default-jre
 libnotify-bin
+
+# Miniatures dans l'explorateur : jaquettes des films (MKV, MP4…),
+# images, PDF, polices…
+ffmpegthumbs
+kdegraphics-thumbnailers
+kio-extras
