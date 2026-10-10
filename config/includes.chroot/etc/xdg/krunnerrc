@@ -1,0 +1,6 @@
+# NovaOS — recherche universelle façon Spotlight (centrée, flottante)
+[General]
+FreeFloating=true
+ActivateWhenTypingOnDesktop=true
+RetainPriorSearch=false
+historyBehavior=CompletionSuggestion

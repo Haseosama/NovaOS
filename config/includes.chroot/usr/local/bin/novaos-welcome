@@ -62,8 +62,10 @@ if [ -n "$KWC" ]; then
     if grep -q '^widgetStyle=kvantum' /etc/xdg/kdeglobals 2>/dev/null; then
         "$KWC" --file kdeglobals --group KDE --key widgetStyle kvantum
     fi
-    "$KWC" --file kwinrc --group org.kde.kdecoration2 --key library org.kde.breeze
-    "$KWC" --file kwinrc --group org.kde.kdecoration2 --key theme Breeze
+    DECO_LIB="$(sed -n 's/^library=//p' /etc/xdg/kwinrc | head -n1)"
+    DECO_THEME="$(sed -n 's/^theme=//p' /etc/xdg/kwinrc | head -n1)"
+    "$KWC" --file kwinrc --group org.kde.kdecoration2 --key library "${DECO_LIB:-org.kde.breeze}"
+    "$KWC" --file kwinrc --group org.kde.kdecoration2 --key theme "${DECO_THEME:-Breeze}"
     "$KWC" --file kwinrc --group Plugins --key blurEnabled true
     "$KWC" --file kwinrc --group Plugins --key contrastEnabled true
     command -v qdbus6 >/dev/null 2>&1 && qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
@@ -88,6 +90,9 @@ Programmes Windows (.exe) :
 Raccourcis futuristes :
   • Touche Windows : menu Démarrer · Meta+W : vue d'ensemble · Alt+Espace : recherche universelle (KRunner).
   • Glissez une fenêtre en haut de l'écran pour l'agrandir, sur un côté pour la moitié de l'écran.
+  • Tapez directement sur le bureau (ou Alt+Espace) : la recherche s'ouvre au centre, façon Spotlight.
+  • 4 bureaux virtuels : Ctrl+Meta+← / → · coin supérieur gauche : vue d'ensemble.
+  • Meta+T : dispositions de fenêtres en mosaïque · le soir, l'écran passe en lumière chaude.
 
 Quelques conseils pour rester en sécurité :
   • N'ouvrez que des .exe de confiance : Wine les exécute avec vos droits.

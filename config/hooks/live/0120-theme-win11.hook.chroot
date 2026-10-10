@@ -49,6 +49,17 @@ else
         /usr/share/plasma/look-and-feel/org.novaos.desktop/contents/layouts/org.kde.plasma.desktop-layout.js
 fi
 
+# --- Décoration de fenêtres NovaOS (moteur Aurorae de KWin) ---
+# Sans le moteur Aurorae, on garde Breeze (sombre translucide).
+if find /usr/lib -name '*aurorae*.so' 2>/dev/null | grep -q .; then
+    echo "[novaos] décoration de fenêtres NovaOS (Aurorae) activée"
+else
+    sed -i -e 's/^library=org.kde.kwin.aurorae/library=org.kde.breeze/' \
+           -e 's/^theme=__aurorae__svg__NovaOS/theme=Breeze/' \
+        /etc/xdg/kwinrc /usr/share/plasma/look-and-feel/org.novaos.desktop/contents/defaults
+    echo "[novaos] AVERTISSEMENT : moteur Aurorae introuvable, décoration Breeze conservée" >&2
+fi
+
 # --- Applique la configuration bureau aux comptes existants (ex. user live) ---
 # Les comptes créés à l'installation l'obtiennent via /etc/skel.
 if [ -d /etc/skel/.config ]; then

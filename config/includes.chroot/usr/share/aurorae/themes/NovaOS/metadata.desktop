@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=NovaOS
+Name[fr]=NovaOS
+Comment=NovaOS glass window decoration
+Comment[fr]=Décoration de fenêtres NovaOS : verre sombre, liseré néon, boutons façon Windows 11
+X-KDE-PluginInfo-Author=NovaOS Project
+X-KDE-PluginInfo-Name=NovaOS
+X-KDE-PluginInfo-Version=2026.10
+X-KDE-PluginInfo-License=MIT
+X-KDE-PluginInfo-Website=https://github.com/Haseosama/NovaOS
