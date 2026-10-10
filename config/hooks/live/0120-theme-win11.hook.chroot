@@ -110,6 +110,41 @@ fi
 gtk-update-icon-cache -f -q "$NOVA_ICONS" 2>/dev/null || true
 echo "[novaos] pack d'icônes NovaOS : $(find "$NOVA_ICONS" -name '*.svg' | wc -l) icônes"
 
+# --- Pointeur de souris « NovaOS » (verre sombre, contour néon cyan/violet) ---
+# Images dans /usr/share/novaos/cursors-src (générées par
+# assets/cursors/make-cursors.py) ; assemblées ici en thème Xcursor.
+# Les pointeurs non dessinés (redimensionnement…) viennent de Breeze_Snow.
+CSRC=/usr/share/novaos/cursors-src
+CDST=/usr/share/icons/NovaOS-Cursors
+command -v xcursorgen >/dev/null 2>&1 \
+    || apt-get install -y --no-install-recommends x11-apps >/dev/null 2>&1 || true
+if [ -d "$CSRC" ] && command -v xcursorgen >/dev/null 2>&1; then
+    mkdir -p "$CDST/cursors"
+    ok=true
+    for cfg in "$CSRC"/*.cfg; do
+        name="$(basename "$cfg" .cfg)"
+        (cd "$CSRC" && xcursorgen "$cfg" "$CDST/cursors/$name") || ok=false
+    done
+    while read -r name aliases; do
+        for a in $aliases; do ln -sf "$name" "$CDST/cursors/$a"; done
+    done < "$CSRC/aliases"
+    printf '[Icon Theme]\nName=NovaOS\nComment=Pointeur futuriste NovaOS\nInherits=Breeze_Snow\n' > "$CDST/index.theme"
+    if $ok && [ -s "$CDST/cursors/left_ptr" ]; then
+        sed -i 's/^cursorTheme=Breeze_Snow/cursorTheme=NovaOS-Cursors/' \
+            /etc/xdg/kdeglobals /etc/xdg/kcminputrc \
+            /usr/share/plasma/look-and-feel/org.novaos.desktop/contents/defaults
+        sed -i 's/^gtk-cursor-theme-name=Breeze_Snow/gtk-cursor-theme-name=NovaOS-Cursors/' /etc/xdg/gtk-3.0/settings.ini
+        mkdir -p /usr/share/icons/default
+        printf '[Icon Theme]\nInherits=NovaOS-Cursors\n' > /usr/share/icons/default/index.theme
+        echo "[novaos] pointeur NovaOS installé ($(ls "$CDST/cursors" | wc -l) curseurs)"
+    else
+        echo "[novaos] AVERTISSEMENT : pointeur NovaOS incomplet, Breeze_Snow conservé" >&2
+    fi
+else
+    echo "[novaos] AVERTISSEMENT : xcursorgen indisponible, pointeur Breeze_Snow conservé" >&2
+fi
+rm -rf "$CSRC"
+
 # --- Applique la configuration bureau aux comptes existants (ex. user live) ---
 # Les comptes créés à l'installation l'obtiennent via /etc/skel.
 if [ -d /etc/skel/.config ]; then

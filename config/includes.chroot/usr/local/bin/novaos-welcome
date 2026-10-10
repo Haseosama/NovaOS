@@ -59,6 +59,8 @@ KWC="$(command -v kwriteconfig6 || command -v kwriteconfig5 || true)"
 if [ -n "$KWC" ]; then
     "$KWC" --file kdeglobals --group KDE --key LookAndFeelPackage org.novaos.desktop
     "$KWC" --file kdeglobals --group Icons --key Theme NovaOS
+    CURSOR="$(sed -n 's/^cursorTheme=//p' /etc/xdg/kcminputrc 2>/dev/null | head -n1)"
+    [ -n "$CURSOR" ] && "$KWC" --file kcminputrc --group Mouse --key cursorTheme "$CURSOR"
     if grep -q '^widgetStyle=kvantum' /etc/xdg/kdeglobals 2>/dev/null; then
         "$KWC" --file kdeglobals --group KDE --key widgetStyle kvantum
     fi
