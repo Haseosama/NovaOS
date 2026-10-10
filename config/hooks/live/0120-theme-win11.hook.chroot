@@ -34,6 +34,26 @@ else
     echo "[novaos] AVERTISSEMENT : Kvantum Qt 6 indisponible, style Breeze conservé" >&2
 fi
 
+# --- Widgets processeur / mémoire du bureau ---
+# Les widgets « Moniteur système » ont besoin des faces graphiques de
+# libksysguard et du service ksystemstats, sinon ils restent vides.
+SYSMON_PKGS="ksystemstats plasma-systemmonitor"
+for p in $(apt-cache pkgnames 2>/dev/null | grep -E 'ksysguard|ksystemstats' | grep -v -E -- '-(dev|dbg|doc)$' | grep -v -i 'ksysguardd$'); do
+    SYSMON_PKGS="$SYSMON_PKGS $p"
+done
+for p in $SYSMON_PKGS; do
+    apt-get install -y --no-install-recommends "$p" >/dev/null 2>&1 || true
+done
+if find /usr -path '*ksysguard*' -name 'org.kde.ksysguard.piechart*' 2>/dev/null | grep -q . \
+   || find /usr -path '*ksysguard/faces*' 2>/dev/null | grep -q .; then
+    echo "[novaos] widgets moniteur système : faces graphiques présentes"
+else
+    echo "[novaos] AVERTISSEMENT : faces ksysguard introuvables : widgets processeur/mémoire retirés" >&2
+    sed -i '/org.kde.plasma.systemmonitor/d' /usr/share/novaos/novaos-panel.js \
+        /usr/share/plasma/look-and-feel/org.novaos.desktop/contents/layouts/org.kde.plasma.desktop-layout.js
+fi
+command -v ksystemstats >/dev/null 2>&1 && echo "[novaos] ksystemstats présent"
+
 # --- Applique la configuration bureau aux comptes existants (ex. user live) ---
 # Les comptes créés à l'installation l'obtiennent via /etc/skel.
 if [ -d /etc/skel/.config ]; then

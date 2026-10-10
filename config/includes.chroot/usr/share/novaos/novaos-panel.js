@@ -48,7 +48,7 @@ function novaCreatePanel() {
             "applications:org.kde.discover.desktop",
             "applications:org.kde.konsole.desktop",
             "applications:systemsettings.desktop"
-        ].join(","));
+        ]);  // liste (et non une chaîne) : sinon un seul lanceur « ? »
     });
 
     novaTry("espace droit", function () { panel.addWidget("org.kde.plasma.panelspacer"); });
