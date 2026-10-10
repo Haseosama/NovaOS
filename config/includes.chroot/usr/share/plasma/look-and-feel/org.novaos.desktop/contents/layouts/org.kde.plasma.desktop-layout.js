@@ -21,6 +21,8 @@ panel.location = "bottom";
 panel.height = 2 * Math.ceil(gridUnit * 2.6 / 2);
 panel.hiding = "none";
 try { panel.floating = true; } catch (e) { /* Plasma < 6 */ }
+// Verre liquide : barre toujours translucide (floutée par KWin)
+try { panel.opacity = "translucent"; } catch (e) { }
 
 panel.addWidget("org.kde.plasma.panelspacer");
 
@@ -36,7 +38,7 @@ var tasks = panel.addWidget("org.kde.plasma.icontasks");
 tasks.currentConfigGroup = ["General"];
 tasks.writeConfig("launchers", [
     "applications:firefox-esr.desktop",
-    "applications:org.kde.dolphin.desktop",
+    "applications:novaos-explorer.desktop",
     "applications:org.kde.discover.desktop",
     "applications:org.kde.konsole.desktop",
     "applications:systemsettings.desktop"

@@ -12,8 +12,8 @@ magiclampEnabled=true
 translucencyEnabled=true
 
 [Effect-blur]
-BlurStrength=12
-NoiseStrength=4
+BlurStrength=15
+NoiseStrength=6
 
 [Effect-translucency]
 MoveResize=85
@@ -30,3 +30,4 @@ ButtonsOnRight=IAX
 # sur un côté pour la moitié de l'écran (comme les « Snap layouts »)
 ElectricBorderMaximize=true
 ElectricBorderTiling=true
+

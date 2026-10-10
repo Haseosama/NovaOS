@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Ce PC
+Comment=Explorateur de fichiers : dossiers, disques et clés USB
+Exec=dolphin --new-window
+Icon=computer
+Terminal=false
+StartupWMClass=dolphin

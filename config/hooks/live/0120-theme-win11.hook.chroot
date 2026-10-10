@@ -19,6 +19,21 @@ if ! command -v fastfetch >/dev/null 2>&1; then
         || true
 fi
 
+# --- Verre liquide : style d'applications Kvantum « NovaGlass » ---
+# Fenêtres, menus et infobulles translucides et floutés. Si le style Qt 6
+# Kvantum n'est pas disponible, NovaOS garde Breeze (sombre).
+apt-get update -qq >/dev/null 2>&1 || true
+apt-get install -y qt6-style-kvantum >/dev/null 2>&1 \
+    || apt-get install -y qt-style-kvantum >/dev/null 2>&1 \
+    || true
+if ls /usr/lib/*/qt6/plugins/styles/*kvantum*.so >/dev/null 2>&1; then
+    sed -i 's/^widgetStyle=.*/widgetStyle=kvantum/' /etc/xdg/kdeglobals \
+        /usr/share/plasma/look-and-feel/org.novaos.desktop/contents/defaults
+    echo "[novaos] style Kvantum NovaGlass activé"
+else
+    echo "[novaos] AVERTISSEMENT : Kvantum Qt 6 indisponible, style Breeze conservé" >&2
+fi
+
 # --- Applique la configuration bureau aux comptes existants (ex. user live) ---
 # Les comptes créés à l'installation l'obtiennent via /etc/skel.
 if [ -d /etc/skel/.config ]; then

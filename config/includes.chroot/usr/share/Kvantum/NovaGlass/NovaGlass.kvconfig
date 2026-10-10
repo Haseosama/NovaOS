@@ -1,0 +1,58 @@
+# NovaOS — thème Kvantum « NovaGlass » (verre liquide sombre)
+#
+# Fenêtres, menus et infobulles translucides, floutés par KWin, palette
+# NovaOS (bleu #0078D4). Les éléments graphiques sont ceux du thème
+# Kvantum par défaut (sombre, arrondi) : seul ce fichier est fourni.
+
+[%General]
+author=NovaOS Project
+comment=Verre liquide sombre NovaOS
+composite=true
+translucent_windows=true
+blurring=true
+popup_blurring=true
+reduce_window_opacity=22
+reduce_menu_opacity=18
+menu_shadow_depth=7
+tooltip_shadow_depth=6
+spread_menuitems=true
+menubar_mouse_tracking=true
+animate_states=true
+no_inactiveness=false
+x11drag=menubar_and_primary_toolbar
+respect_DE=true
+scroll_width=10
+scroll_arrows=false
+scroll_min_extent=36
+transient_scrollbar=true
+small_icon_size=16
+large_icon_size=32
+button_icon_size=16
+toolbar_icon_size=22
+layout_spacing=6
+layout_margin=9
+submenu_overlap=0
+tree_branch_line=false
+# Applications qui doivent rester opaques (vidéo, machines virtuelles…)
+opaque=kaffeine,kmplayer,subtitlecomposer,kdenlive,vlc,avidemux,avidemux2_qt4,avidemux3_qt4,avidemux3_qt5,kamoso,QtCreator,VirtualBox,VirtualBoxVM,trojita,dragon,digikam,lyx,calamares
+
+[GeneralColors]
+window.color=#141a28
+base.color=#0f1420
+alt.base.color=#161c2a
+button.color=#1e2638
+light.color=#2a3448
+mid.light.color=#232c3e
+dark.color=#0a0e18
+mid.color=#1a2232
+highlight.color=#0078d4
+inactive.highlight.color=#0a4a80
+text.color=#eff0f1
+window.text.color=#eff0f1
+button.text.color=#eff0f1
+disabled.text.color=#6b7280
+tooltip.text.color=#eff0f1
+highlight.text.color=#ffffff
+link.color=#3daee9
+link.visited.color=#a78bfa
+progress.indicator.text.color=#ffffff
