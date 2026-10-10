@@ -8,7 +8,7 @@ Theme=Papirus-Dark
 widgetStyle=Breeze
 
 [plasmarc][Theme]
-name=breeze-dark
+name=novaglass
 
 [kcminputrc][Mouse]
 cursorTheme=Breeze_Snow
