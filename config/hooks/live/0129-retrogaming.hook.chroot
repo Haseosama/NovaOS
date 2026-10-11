@@ -38,6 +38,11 @@ done
 echo "[novaos] rétrogaming : installés :$installed"
 [ -n "$missing" ] && echo "[novaos] AVERTISSEMENT : rétrogaming : indisponibles :$missing" >&2
 
+# FCEUX (Qt) s'affiche mal sous Wayland : on le lance via XWayland
+for f in /usr/share/applications/fceux.desktop /usr/share/applications/*fceux*.desktop; do
+    [ -f "$f" ] && sed -i 's#^Exec=fceux#Exec=env QT_QPA_PLATFORM=xcb fceux#; s#^Exec=/usr/games/fceux#Exec=env QT_QPA_PLATFORM=xcb /usr/games/fceux#' "$f"
+done
+
 # --- ES-DE : dernière version officielle (AppImage), extraite dans /opt/es-de ---
 url="$(curl -fsSL --retry 3 'https://gitlab.com/api/v4/projects/es-de%2Femulationstation-de/releases?per_page=1' 2>/dev/null \
     | python3 -c 'import json,sys

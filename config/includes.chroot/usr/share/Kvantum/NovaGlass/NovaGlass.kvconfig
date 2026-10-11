@@ -33,8 +33,9 @@ layout_spacing=6
 layout_margin=9
 submenu_overlap=0
 tree_branch_line=false
-# Applications qui doivent rester opaques (vidéo, machines virtuelles…)
-opaque=kaffeine,kmplayer,subtitlecomposer,kdenlive,vlc,avidemux,avidemux2_qt4,avidemux3_qt4,avidemux3_qt5,kamoso,QtCreator,VirtualBox,VirtualBoxVM,trojita,dragon,digikam,lyx,calamares
+# Applications qui doivent rester opaques (vidéo, émulateurs, jeux, machines
+# virtuelles…) : la transparence y donne une image cassée ou clignotante
+opaque=fceux,retroarch,es-de,ES-DE,dolphin-emu,mgba-qt,mgba,desmume,mednafen,mednaffe,pcsx2-qt,duckstation-qt,rpcs3,ppsspp,PPSSPPQt,PPSSPPSDL,melonDS,azahar,Cemu,cemu,Ryujinx,xemu,flycast,ares,RMG,simple64-gui,mpc-qt,handbrake,ghb,mkvtoolnix-gui,mediainfo-gui,steam,lutris,kaffeine,kmplayer,subtitlecomposer,kdenlive,vlc,avidemux,avidemux2_qt4,avidemux3_qt4,avidemux3_qt5,kamoso,QtCreator,VirtualBox,VirtualBoxVM,trojita,dragon,digikam,lyx,calamares
 
 [GeneralColors]
 window.color=#141a28

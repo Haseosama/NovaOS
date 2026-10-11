@@ -55,6 +55,8 @@ while IFS='|' read -r id name; do
     echo; echo "=== $name"
     if flatpak install --user -y --noninteractive flathub "$id"; then ok="$ok\n  ✓ $name"; else ko="$ko\n  ✗ $name"; fi
 done <<< "$APPS"
+# Les émulateurs Flathub voient les disques externes et clés USB
+flatpak override --user --filesystem=/media --filesystem=/run/media --filesystem=/mnt 2>/dev/null || true
 mkdir -p "$HOME/.config/novaos"; touch "$HOME/.config/novaos/emulators-installed"
 echo; echo "Installés :"; printf "%b\n" "$ok"
 [ -n "$ko" ] && { echo "Non installés (réessayez plus tard) :"; printf "%b\n" "$ko"; }

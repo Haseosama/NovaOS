@@ -1,0 +1,8 @@
+# NovaOS — disques externes et clés USB montés tout seuls (comme Windows),
+# à la connexion et dès qu'ils sont branchés : ils sont alors visibles dans
+# /media/<utilisateur>/ par toutes les applications (émulateurs, lecteurs…)
+[General]
+AutomountEnabled=true
+AutomountOnLogin=true
+AutomountOnPlugin=true
+AutomountUnknownDevices=true
