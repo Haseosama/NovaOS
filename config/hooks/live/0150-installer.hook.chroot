@@ -80,6 +80,23 @@ if ! command -v grub-install >/dev/null 2>&1; then
 fi
 
 
+# --- GRUB pour les deux modes de démarrage du PC à installer ---
+# grub-install --target=i386-pc (PC en BIOS / « Legacy ») a besoin de
+# grub-pc-bin, et --target=x86_64-efi (PC en UEFI) de grub-efi-amd64-bin :
+# les deux coexistent, contrairement à grub-pc / grub-efi-amd64.
+DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    grub-pc-bin grub-efi-amd64-bin grub2-common grub-common efibootmgr os-prober \
+    >/dev/null 2>&1 || true
+DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    grub-efi-amd64-signed shim-signed >/dev/null 2>&1 || true
+for d in i386-pc x86_64-efi; do
+    if [ -d "/usr/lib/grub/$d" ]; then
+        echo "[novaos] installateur : GRUB $d présent"
+    else
+        echo "[novaos] AVERTISSEMENT : installateur : GRUB $d absent" >&2
+    fi
+done
+
 # --- Une seule icône d'installation : « Installer NovaOS » ---
 # calamares-settings-debian ajoute « Install Debian » sur le bureau au
 # démarrage (autostart add-calamares-desktop-icon) : on le retire.
