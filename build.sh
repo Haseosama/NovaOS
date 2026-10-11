@@ -87,7 +87,7 @@ lb config \
     --iso-publisher "NovaOS Project" \
     --iso-preparer "NovaOS build.sh (Debian live-build)" \
     --iso-volume "NovaOS" \
-    --bootappend-live "boot=live components quiet splash locales=fr_FR.UTF-8 keyboard-layouts=fr"
+    --bootappend-live "boot=live components quiet splash locales=fr_FR.UTF-8 keyboard-layouts=fr preempt=full"
 
 # ------------------------------------------------------------------ build -----
 log "Construction de l'ISO (30 à 90 minutes selon la machine)…"

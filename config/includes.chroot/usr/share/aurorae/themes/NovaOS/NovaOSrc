@@ -10,9 +10,10 @@ Translucency=true
 Blur=true
 
 [Layout]
-BorderLeft=1
-BorderRight=1
-BorderBottom=1
+# Bords de 4 px : assez larges pour saisir et redimensionner les fenêtres
+BorderLeft=4
+BorderRight=4
+BorderBottom=4
 TitleEdgeTop=2
 TitleEdgeBottom=2
 TitleEdgeLeft=12

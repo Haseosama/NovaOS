@@ -98,6 +98,7 @@ Raccourcis futuristes :
   • 4 bureaux virtuels : Ctrl+Meta+← / → · coin supérieur gauche : vue d'ensemble.
   • Copies de fichiers : fenêtre avec le graphique de vitesse, comme Windows 11.
   • Explorateur : Ctrl+T ouvre un nouvel onglet, clic molette sur un dossier l'ouvre en onglet.
+  • Jeux : Steam (avec Proton), Lutris et Heroic dans le menu Jeux ; GameMode et MangoHud s'activent avec « gamemoderun mangohud %command% » dans les options de lancement Steam.
   • Meta+T : dispositions de fenêtres en mosaïque · le soir, l'écran passe en lumière chaude.
 
 Quelques conseils pour rester en sécurité :

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Heroic Games Launcher
+GenericName=Jeux Epic Games et GOG
+Comment=Jeux Epic Games, GOG et Amazon (installé au premier lancement)
+Exec=/usr/local/bin/novaos-heroic
+Icon=applications-games
+Terminal=false
+Categories=Game;

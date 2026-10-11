@@ -1,0 +1,59 @@
+#!/bin/bash
+#
+# NovaOS — hook live-build : jeux vidéo
+#   • Steam (avec Proton pour les jeux Windows), Lutris
+#   • GameMode (priorité CPU/GPU pendant les jeux), MangoHud (FPS à l'écran),
+#     gamescope (compositeur de jeu de Valve)
+#   • Vulkan + Mesa en 64 et 32 bits (jeux et Proton)
+#   • Heroic (Epic / GOG) et ProtonUp-Qt installables en un clic : novaos-gaming-extras
+# Chaque paquet est facultatif : s'il manque dans les dépôts, la construction
+# continue et un avertissement est écrit dans le journal.
+#
+
+apt_retry() {
+    local i
+    for i in 1 2 3; do
+        DEBIAN_FRONTEND=noninteractive apt-get "$@" && return 0
+        sleep 5
+    done
+    return 1
+}
+
+# i386 déjà ajouté par le hook Wine ; on s'en assure
+dpkg --add-architecture i386 2>/dev/null || true
+apt_retry update >/dev/null 2>&1 || true
+
+# Steam demande d'accepter sa licence : réponse donnée d'avance
+echo "steam steam/question select I AGREE" | debconf-set-selections
+echo "steam steam/license note ''" | debconf-set-selections
+echo "steam steam/purge note ''" | debconf-set-selections
+
+installed=""
+missing=""
+for p in mesa-vulkan-drivers mesa-vulkan-drivers:i386 libvulkan1 libvulkan1:i386 \
+         libgl1-mesa-dri libgl1-mesa-dri:i386 libglx-mesa0:i386 vulkan-tools mesa-utils \
+         gamemode libgamemode0:i386 mangohud mangohud:i386 gamescope \
+         steam-installer steam-devices lutris; do
+    if apt_retry install -y --no-install-recommends "$p" >/dev/null 2>&1; then
+        installed="$installed $p"
+    else
+        missing="$missing $p"
+    fi
+done
+echo "[novaos] jeux : installés :$installed"
+[ -n "$missing" ] && echo "[novaos] AVERTISSEMENT : jeux : indisponibles :$missing" >&2
+
+# Steam : lanceur mis en avant (le paquet installe Steam au premier lancement)
+if [ -x /usr/games/steam ] || [ -x /usr/bin/steam ]; then
+    echo "[novaos] Steam prêt (téléchargé au premier lancement)"
+fi
+
+# GameMode : l'utilisateur live (et les futurs comptes) dans le groupe gamemode
+getent group gamemode >/dev/null && usermod -aG gamemode user 2>/dev/null || true
+if getent group gamemode >/dev/null && [ -f /etc/adduser.conf ]; then
+    grep -q '^EXTRA_GROUPS=.*gamemode' /etc/adduser.conf || {
+        sed -i 's/^#\?EXTRA_GROUPS=.*/EXTRA_GROUPS="users gamemode"/' /etc/adduser.conf
+        sed -i 's/^#\?ADD_EXTRA_GROUPS=.*/ADD_EXTRA_GROUPS=1/' /etc/adduser.conf
+    }
+fi
+exit 0

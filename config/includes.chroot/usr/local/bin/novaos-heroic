@@ -1,0 +1,33 @@
+#!/bin/bash
+#
+# NovaOS — Heroic Games Launcher : jeux Epic Games, GOG et Amazon
+#
+# Heroic (Flathub) est installé à la demande (≈ 300 Mo) au premier lancement,
+# avec ProtonUp-Qt pour ajouter des versions de Proton-GE à Steam et Heroic.
+#
+set -u
+APP=com.heroicgameslauncher.hgl
+EXTRA=net.davidotek.pupgui2
+
+if flatpak info "$APP" >/dev/null 2>&1; then
+    exec flatpak run "$APP" "$@"
+fi
+
+kdialog --title "Heroic Games Launcher" --yesno "Heroic n'est pas encore installé.
+
+Heroic lance vos jeux Epic Games, GOG et Amazon Prime Gaming, avec Proton.
+ProtonUp-Qt sera aussi installé pour ajouter des versions de Proton-GE.
+
+Les télécharger maintenant depuis Flathub (environ 300 Mo) ?" >/dev/null 2>&1 || exit 0
+
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+if command -v konsole >/dev/null 2>&1; then
+    konsole --hide-menubar -p tabtitle="Installation de Heroic" \
+        -e bash -c "flatpak install --user -y flathub $APP $EXTRA || { echo; echo 'Échec de l installation (connexion Internet ?)'; read -r -p 'Entrée pour fermer'; }"
+else
+    flatpak install --user -y flathub "$APP" "$EXTRA"
+fi
+
+flatpak info "$APP" >/dev/null 2>&1 && exec flatpak run "$APP" "$@"
+exit 1
