@@ -57,13 +57,15 @@ if [ -n "$url" ] && curl -fsSL --retry 3 -o /tmp/es-de.AppImage "$url"; then
     chmod +x /tmp/es-de.AppImage
     rm -rf /opt/es-de /tmp/squashfs-root
     if (cd /tmp && ./es-de.AppImage --appimage-extract >/dev/null 2>/tmp/es-de.log) && [ -x /tmp/squashfs-root/AppRun ]; then
-        mv /tmp/squashfs-root /opt/es-de
+        # selon la version, squashfs-root est un lien vers ./AppDir : on déplace le vrai dossier
+        mv "$(readlink -f /tmp/squashfs-root)" /opt/es-de
         chmod -R a+rX /opt/es-de
         ok=1
     fi
-    rm -f /tmp/es-de.AppImage /tmp/es-de.log; rm -rf /tmp/squashfs-root
+    rm -f /tmp/es-de.AppImage /tmp/es-de.log; rm -rf /tmp/squashfs-root /tmp/AppDir
 fi
 
+[ -x /opt/es-de/AppRun ] || ok=0
 if [ "$ok" = 1 ]; then
     icon="$(find /opt/es-de -maxdepth 1 \( -name '*.svg' -o -name '*.png' \) | head -n1)"
     cat > /usr/local/bin/novaos-retro <<'SH'

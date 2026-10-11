@@ -42,7 +42,7 @@ if [ -z "$MPC_DESKTOP" ] && [ -n "$mpc_tag" ]; then
         chmod +x /tmp/mpc-qt.AppImage
         rm -rf /opt/mpc-qt /tmp/squashfs-root
         if (cd /tmp && ./mpc-qt.AppImage --appimage-extract >/dev/null 2>/tmp/mpc-extract.log) && [ -x /tmp/squashfs-root/AppRun ]; then
-            mv /tmp/squashfs-root /opt/mpc-qt
+            mv "$(readlink -f /tmp/squashfs-root)" /opt/mpc-qt
             chmod -R a+rX /opt/mpc-qt
             printf '#!/bin/sh\nexec /opt/mpc-qt/AppRun "$@"\n' > /usr/local/bin/mpc-qt
             chmod +x /usr/local/bin/mpc-qt
@@ -52,7 +52,7 @@ if [ -z "$MPC_DESKTOP" ] && [ -n "$mpc_tag" ]; then
         else
             echo "[novaos] mpc-qt : extraction de l'AppImage impossible : $(tail -n2 /tmp/mpc-extract.log 2>/dev/null)" >&2
         fi
-        rm -f /tmp/mpc-qt.AppImage /tmp/mpc-extract.log; rm -rf /tmp/squashfs-root
+        rm -f /tmp/mpc-qt.AppImage /tmp/mpc-extract.log; rm -rf /tmp/squashfs-root /tmp/AppDir
     fi
 fi
 
