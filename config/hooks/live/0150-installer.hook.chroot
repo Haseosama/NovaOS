@@ -17,6 +17,11 @@ if [ -d "$STAGING" ]; then
     mkdir -p /etc/calamares/modules
     if [ -f /etc/calamares/settings.conf ] && grep -q '^branding:' /etc/calamares/settings.conf; then
         sed -i 's/^branding:.*/branding: novaos/' /etc/calamares/settings.conf
+        # Le compte live « user » fait partie de l'image NovaOS (il n'est pas
+        # créé au démarrage comme chez Debian) : on le retire du système installé
+        if ! grep -qE '^ +- removeuser *$' /etc/calamares/settings.conf; then
+            sed -i '0,/^\( *\)- umount *$/s//\1- removeuser\n&/' /etc/calamares/settings.conf
+        fi
         echo "[novaos] installateur : séquence Debian conservée, habillage NovaOS"
     else
         cp "$STAGING/settings.conf" /etc/calamares/settings.conf
