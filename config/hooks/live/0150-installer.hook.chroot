@@ -6,10 +6,39 @@ set -e
 
 # --- Déploie notre configuration Calamares (écrase l'éventuelle config par défaut) ---
 # Le staging est déposé via includes.chroot dans /usr/share/novaos/calamares-staging/
+#
+# On garde la configuration de Debian (calamares-settings-debian), testée de
+# bout en bout : séquence complète (démontage, clé LUKS de démarrage,
+# initramfs, GRUB EFI/BIOS…) et réglages de chaque module. NovaOS n'y change
+# que le habillage, le partitionnement (chiffrement proposé), la politique de
+# mots de passe et le nom de l'entrée EFI.
 STAGING="/usr/share/novaos/calamares-staging"
 if [ -d "$STAGING" ]; then
-    mkdir -p /etc/calamares
-    cp -a "$STAGING"/. /etc/calamares/
+    mkdir -p /etc/calamares/modules
+    if [ -f /etc/calamares/settings.conf ] && grep -q '^branding:' /etc/calamares/settings.conf; then
+        sed -i 's/^branding:.*/branding: novaos/' /etc/calamares/settings.conf
+        echo "[novaos] installateur : séquence Debian conservée, habillage NovaOS"
+    else
+        cp "$STAGING/settings.conf" /etc/calamares/settings.conf
+        echo "[novaos] AVERTISSEMENT : installateur : pas de configuration Debian, séquence NovaOS utilisée" >&2
+    fi
+    for m in partition users welcome; do
+        [ -f "$STAGING/modules/$m.conf" ] && cp "$STAGING/modules/$m.conf" "/etc/calamares/modules/$m.conf"
+    done
+    # Modules sans configuration Debian : on prend la nôtre
+    for f in "$STAGING"/modules/*.conf; do
+        [ -f "/etc/calamares/modules/$(basename "$f")" ] || cp "$f" /etc/calamares/modules/
+    done
+    # Entrée du menu de démarrage UEFI : « NovaOS » au lieu de « debian »
+    bl=/etc/calamares/modules/bootloader.conf
+    if [ -f "$bl" ]; then
+        if grep -q '^efiBootloaderId:' "$bl"; then
+            sed -i 's/^efiBootloaderId:.*/efiBootloaderId: "NovaOS"/' "$bl"
+        else
+            echo 'efiBootloaderId: "NovaOS"' >> "$bl"
+        fi
+    fi
+    echo "[novaos] installateur : modules = $(grep -E '^ +- [a-z@-]+ *$' /etc/calamares/settings.conf | tr -s ' \n' ' ')"
 fi
 
 # --- Groupe « novaos-live » ---
