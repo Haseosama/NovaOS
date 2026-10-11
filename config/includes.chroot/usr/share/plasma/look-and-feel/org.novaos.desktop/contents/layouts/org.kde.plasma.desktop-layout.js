@@ -43,7 +43,7 @@ function novaCreatePanel() {
         kickoff.currentConfigGroup = ["Shortcuts"];
         kickoff.writeConfig("global", "Alt+F1");
         kickoff.currentConfigGroup = ["General"];
-        kickoff.writeConfig("icon", "/usr/share/novaos/novaos-logo.svg");
+        kickoff.writeConfig("icon", "novaos-logo");
     });
 
     // Applications épinglées (icônes seules, comme Windows 11)
