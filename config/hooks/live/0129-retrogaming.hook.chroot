@@ -67,6 +67,11 @@ if [ "$ok" = 1 ]; then
 # Les jeux vont dans ~/ROMs/<console> (dossiers créés au premier lancement),
 # les BIOS dans ~/ROMs/bios ; RetroArch et ses cœurs sont trouvés tout seuls.
 mkdir -p "$HOME/ROMs/bios"
+# Premier lancement : proposer les émulateurs supplémentaires (PS2, PS3, Switch…)
+if [ ! -e "$HOME/.config/novaos/emulators-asked" ] && [ ! -e "$HOME/.config/novaos/emulators-installed" ]; then
+    mkdir -p "$HOME/.config/novaos"; touch "$HOME/.config/novaos/emulators-asked"
+    /usr/local/bin/novaos-emulators
+fi
 exec /opt/es-de/AppRun "$@"
 SH
     chmod 755 /usr/local/bin/novaos-retro

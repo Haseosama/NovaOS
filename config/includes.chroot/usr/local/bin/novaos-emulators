@@ -1,0 +1,62 @@
+#!/bin/bash
+#
+# NovaOS — installe tous les émulateurs de Recalbox / Batocera / RetroBat qui
+# existent sous Linux (Flathub), en plus de ceux déjà dans NovaOS.
+# ES-DE (NovaOS Retro) les détecte tout seul.
+#
+# Déjà dans NovaOS (paquets Debian) : RetroArch + cœurs NES, SNES, Mega Drive,
+# Game Boy, GBA, DS, Virtual Boy, WonderSwan ; Dolphin, mGBA, DeSmuME,
+# Mednafen, FCEUX.
+#
+set -u
+
+# id Flathub | nom affiché
+APPS="
+org.libretro.RetroArch|RetroArch Flathub (tous les cœurs libretro via « Mise à jour en ligne »)
+org.duckstation.DuckStation|DuckStation — PlayStation 1
+net.pcsx2.PCSX2|PCSX2 — PlayStation 2
+net.rpcs3.RPCS3|RPCS3 — PlayStation 3
+org.ppsspp.PPSSPP|PPSSPP — PSP
+net.shadps4.shadPS4|shadPS4 — PlayStation 4 (expérimental)
+com.github.Rosalie241.RMG|Rosalie's Mupen GUI — Nintendo 64
+io.github.simple64.simple64|simple64 — Nintendo 64
+net.kuribo64.melonDS|melonDS — Nintendo DS
+org.azahar_emu.Azahar|Azahar — Nintendo 3DS
+info.cemu.Cemu|Cemu — Wii U
+io.github.ryubing.Ryujinx|Ryujinx — Nintendo Switch
+app.xemu.xemu|xemu — Xbox
+org.flycast.Flycast|Flycast — Dreamcast, Naomi, Atomiswave
+org.mamedev.MAME|MAME — arcade
+com.supermodel3.Supermodel|Supermodel — Sega Model 3
+dev.ares.ares|ares — multi-systèmes (Saturn, N64, PC Engine…)
+org.scummvm.ScummVM|ScummVM — jeux d'aventure
+io.github.dosbox-staging|DOSBox Staging — jeux DOS
+net.fsuae.FS-UAE|FS-UAE — Amiga
+org.vice_emu.Vice|VICE — Commodore 64
+org.openmsx.openMSX|openMSX — MSX
+io.github.stella_emu.Stella|Stella — Atari 2600
+org.tuxfamily.hatari|Hatari — Atari ST
+"
+
+if [ "${1:-}" != "--run" ]; then
+    list="$(echo "$APPS" | sed -n 's/^[^|]*|/  • /p')"
+    kdialog --title "Émulateurs NovaOS" --yesno "Installer tous les émulateurs supplémentaires de Recalbox, Batocera et RetroBat ?
+
+$list
+
+Téléchargement depuis Flathub : environ 6 à 8 Go, connexion Internet nécessaire." >/dev/null 2>&1 || exit 0
+    exec konsole --hide-menubar -p tabtitle="Installation des émulateurs" -e "$0" --run
+fi
+
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+ok=""; ko=""
+while IFS='|' read -r id name; do
+    [ -n "$id" ] || continue
+    echo; echo "=== $name"
+    if flatpak install --user -y --noninteractive flathub "$id"; then ok="$ok\n  ✓ $name"; else ko="$ko\n  ✗ $name"; fi
+done <<< "$APPS"
+mkdir -p "$HOME/.config/novaos"; touch "$HOME/.config/novaos/emulators-installed"
+echo; echo "Installés :"; printf "%b\n" "$ok"
+[ -n "$ko" ] && { echo "Non installés (réessayez plus tard) :"; printf "%b\n" "$ko"; }
+echo; echo "Lancez « NovaOS Retro » : ES-DE trouve tous ces émulateurs tout seul."
+read -r -p "Appuyez sur Entrée pour fermer" _

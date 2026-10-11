@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Installer tous les émulateurs
+GenericName=Émulateurs Recalbox / Batocera / RetroBat
+Comment=PS1, PS2, PS3, PSP, N64, 3DS, Wii U, Switch, Xbox, Dreamcast, arcade… depuis Flathub
+Exec=/usr/local/bin/novaos-emulators
+Icon=applications-games
+Terminal=false
+Categories=Game;Emulator;
