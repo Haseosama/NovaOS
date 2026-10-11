@@ -66,6 +66,9 @@ if [ -f "$D/novaos-logo.svg" ]; then
 fi
 gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null || true
 
+# Logo Debian générique des anciennes applications
+[ -f /usr/share/pixmaps/debian-logo.png ] && install -m 644 /usr/share/pixmaps/novaos-logo.png /usr/share/pixmaps/debian-logo.png
+
 # Repérer les logos Debian restants (pour le journal de construction)
 left="$(find /usr/share/pixmaps /usr/share/plasma/avatars /usr/share/sddm /usr/share/plymouth \
         /usr/share/desktop-base /usr/share/images -iname '*debian*' 2>/dev/null | head -n 15 | tr '\n' ' ')"
