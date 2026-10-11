@@ -1,11 +1,64 @@
-# NovaOS — KWin (compositage, flou « verre dépoli » façon Windows 11)
+# NovaOS — KWin (compositage, effets futuristes façon Windows 11)
 
 [Compositing]
 Enabled=true
 
-[Effect-blur]
-Enabled=true
-
 [Plugins]
+# Flou « verre dépoli » derrière la barre, les menus et Konsole
 blurEnabled=true
-kwin4_effect_blurEnabled=true
+# Animation de réduction des fenêtres vers la barre des tâches
+magiclampEnabled=true
+# Fenêtres légèrement translucides pendant leur déplacement
+translucencyEnabled=true
+# Ouverture / fermeture des fenêtres : glissement en perspective (futuriste)
+glideEnabled=true
+scaleEnabled=false
+# Fenêtres inactives légèrement assombries : la fenêtre active ressort
+diminactiveEnabled=true
+# Contraste derrière le verre (lisibilité du texte sur fond flouté)
+contrastEnabled=true
+
+[Effect-blur]
+BlurStrength=15
+NoiseStrength=6
+
+[Effect-glide]
+Duration=220
+OpenEffect=0
+CloseEffect=1
+
+[Effect-translucency]
+MoveResize=85
+
+[org.kde.kdecoration2]
+# Décoration NovaOS (Aurorae) : verre sombre, liseré néon, boutons Windows 11
+library=org.kde.kwin.aurorae
+theme=__aurorae__svg__NovaOS
+# Boutons à droite, ordre Windows : réduire, agrandir, fermer
+ButtonsOnLeft=
+ButtonsOnRight=IAX
+
+[Windows]
+# Ancrage aux bords : glisser une fenêtre en haut pour l'agrandir,
+# sur un côté pour la moitié de l'écran (comme les « Snap layouts »)
+ElectricBorderMaximize=true
+ElectricBorderTiling=true
+
+
+[Effect-diminactive]
+Strength=12
+DimPanels=false
+DimDesktop=false
+
+[Desktops]
+# 4 bureaux virtuels (Ctrl+Meta+← / → pour glisser de l'un à l'autre)
+Number=4
+Rows=1
+
+[NightColor]
+# Confort visuel : écran plus chaud le soir (20 h → 7 h)
+Active=true
+Mode=Times
+EveningBeginFixed=2000
+MorningBeginFixed=0700
+NightTemperature=4500

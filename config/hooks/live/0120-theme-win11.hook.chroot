@@ -5,7 +5,7 @@
 # Le thème lui-même est déposé via config/includes.chroot :
 #   - /usr/share/color-schemes/NovaOS-Dark.colors   (palette)
 #   - /etc/xdg/kdeglobals, /etc/xdg/kwinrc           (thème sombre, accent #0078D4)
-#   - /etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc  (barre centrée Win11)
+#   - /usr/share/plasma/look-and-feel/org.novaos.desktop/  (barre centrée flottante Win11)
 #   - /usr/share/wallpapers/NovaOS-*                 (fonds d'écran)
 #   - /usr/share/sddm/themes/novaos/                 (écran de connexion)
 #
@@ -18,6 +18,143 @@ if ! command -v fastfetch >/dev/null 2>&1; then
         || apt-get install -y neofetch >/dev/null 2>&1 \
         || true
 fi
+
+# --- Verre liquide : style d'applications Kvantum « NovaGlass » ---
+# Fenêtres, menus et infobulles translucides et floutés. Si le style Qt 6
+# Kvantum n'est pas disponible, NovaOS garde Breeze (sombre).
+apt-get update -qq >/dev/null 2>&1 || true
+apt-get install -y qt6-style-kvantum >/dev/null 2>&1 \
+    || apt-get install -y qt-style-kvantum >/dev/null 2>&1 \
+    || true
+if ls /usr/lib/*/qt6/plugins/styles/*kvantum*.so >/dev/null 2>&1; then
+    sed -i 's/^widgetStyle=.*/widgetStyle=kvantum/' /etc/xdg/kdeglobals \
+        /usr/share/plasma/look-and-feel/org.novaos.desktop/contents/defaults
+    echo "[novaos] style Kvantum NovaGlass activé"
+else
+    echo "[novaos] AVERTISSEMENT : Kvantum Qt 6 indisponible, style Breeze conservé" >&2
+fi
+
+# --- Widget « Système NovaOS » (processeur / mémoire) du bureau ---
+# Il lit /usr/local/bin/novaos-sysinfo via le moteur « executable » de
+# Plasma 5 Support : on s'assure que ce module QML est installé.
+for p in $(apt-cache pkgnames 2>/dev/null | grep -i 'plasma5support' | grep -v -E -- '-(dev|dbg|doc)$'); do
+    apt-get install -y --no-install-recommends "$p" >/dev/null 2>&1 || true
+done
+if find /usr/lib -name '*engine_executable*' 2>/dev/null | grep -q . \
+   && find /usr/lib -path '*qml/org/kde/plasma/plasma5support*' 2>/dev/null | grep -q .; then
+    echo "[novaos] widget Système NovaOS : moteur executable présent"
+else
+    echo "[novaos] AVERTISSEMENT : moteur executable de Plasma introuvable : widget Système retiré" >&2
+    sed -i '/org.novaos.sysmon/d' /usr/share/novaos/novaos-panel.js \
+        /usr/share/plasma/look-and-feel/org.novaos.desktop/contents/layouts/org.kde.plasma.desktop-layout.js
+fi
+
+# --- Fenêtre de copie avec graphique de vitesse (novaos-copy-progress) ---
+if python3 -c 'import PyQt6.QtWidgets' 2>/dev/null && command -v dbus-monitor >/dev/null; then
+    echo "[novaos] fenêtre de copie NovaOS (graphique de vitesse) activée"
+else
+    echo "[novaos] AVERTISSEMENT : PyQt6 ou dbus-monitor absent : fenêtre de copie NovaOS retirée" >&2
+    rm -f /etc/xdg/autostart/novaos-copy-progress.desktop
+    sed -i 's/^PermanentPopups=false/PermanentPopups=true/' /etc/xdg/plasmanotifyrc
+fi
+
+# --- Décoration de fenêtres NovaOS (moteur Aurorae de KWin) ---
+# Sans le moteur Aurorae, on garde Breeze (sombre translucide).
+if find /usr/lib -name '*aurorae*.so' 2>/dev/null | grep -q .; then
+    echo "[novaos] décoration de fenêtres NovaOS (Aurorae) activée"
+else
+    sed -i -e 's/^library=org.kde.kwin.aurorae/library=org.kde.breeze/' \
+           -e 's/^theme=__aurorae__svg__NovaOS/theme=Breeze/' \
+        /etc/xdg/kwinrc /usr/share/plasma/look-and-feel/org.novaos.desktop/contents/defaults
+    echo "[novaos] AVERTISSEMENT : moteur Aurorae introuvable, décoration Breeze conservée" >&2
+fi
+
+# --- Pack d'icônes « NovaOS » : icônes néon NovaOS + dossiers cyan ---
+# Base Papirus sombre ; les icônes de dossiers bleues sont redirigées vers
+# leurs variantes cyan de Papirus, et quelques icônes clés (Ce PC, explorateur,
+# corbeille, terminal, paramètres, menu Démarrer) sont dessinées pour NovaOS.
+NOVA_ICONS=/usr/share/icons/NovaOS
+if [ -d /usr/share/icons/Papirus ] || [ -d /usr/share/icons/Papirus-Dark ]; then
+    for theme in Papirus-Dark Papirus; do
+        for dir in /usr/share/icons/$theme/*/places; do
+            [ -d "$dir" ] || continue
+            size="$(basename "$(dirname "$dir")")"
+            mkdir -p "$NOVA_ICONS/$size/places"
+            for f in "$dir"/*.svg; do
+                [ -L "$f" ] || continue
+                name="$(basename "$f")"
+                [ -e "$NOVA_ICONS/$size/places/$name" ] && continue
+                tgt="$(readlink "$f")"
+                case "$tgt" in *-blue*) ;; *) continue ;; esac
+                cyan="$(echo "$tgt" | sed 's/-blue/-cyan/g')"
+                [ -e "$dir/$cyan" ] || continue
+                ln -s "$dir/$cyan" "$NOVA_ICONS/$size/places/$name"
+            done
+        done
+    done
+fi
+{
+    echo "[Icon Theme]"
+    echo "Name=NovaOS"
+    echo "Comment=Icônes néon NovaOS (base Papirus sombre, dossiers cyan)"
+    echo "Inherits=Papirus-Dark,breeze-dark,hicolor"
+    printf "Directories="
+    (cd "$NOVA_ICONS" && find . -mindepth 2 -maxdepth 2 -type d | sed 's|^\./||' | sort | paste -sd, -)
+    echo
+    (cd "$NOVA_ICONS" && find . -mindepth 2 -maxdepth 2 -type d | sed 's|^\./||' | sort) | while read -r d; do
+        size="${d%%/*}"; ctx="${d#*/}"
+        case "$ctx" in places) C=Places ;; apps) C=Applications ;; devices) C=Devices ;; *) C=Other ;; esac
+        echo
+        echo "[$d]"
+        echo "Context=$C"
+        if [ "$size" = scalable ]; then
+            echo "Size=64"; echo "MinSize=16"; echo "MaxSize=512"; echo "Type=Scalable"
+        else
+            n="${size%%x*}"; n="${n%%@*}"
+            echo "Size=$n"; echo "Type=Fixed"
+            case "$size" in *@2x) echo "Scale=2" ;; esac
+        fi
+    done
+} > "$NOVA_ICONS/index.theme"
+gtk-update-icon-cache -f -q "$NOVA_ICONS" 2>/dev/null || true
+echo "[novaos] pack d'icônes NovaOS : $(find "$NOVA_ICONS" -name '*.svg' | wc -l) icônes"
+
+# --- Pointeur de souris « NovaOS » (verre sombre, contour néon cyan/violet) ---
+# Images dans /usr/share/novaos/cursors-src (générées par
+# assets/cursors/make-cursors.py) ; assemblées ici en thème Xcursor.
+# Les pointeurs non dessinés (redimensionnement…) viennent de Breeze_Snow.
+CSRC=/usr/share/novaos/cursors-src
+CDST=/usr/share/icons/NovaOS-Cursors
+command -v xcursorgen >/dev/null 2>&1 \
+    || apt-get install -y --no-install-recommends x11-apps >/dev/null 2>&1 || true
+if [ -d "$CSRC" ] && command -v xcursorgen >/dev/null 2>&1; then
+    mkdir -p "$CDST/cursors"
+    ok=true
+    for cfg in "$CSRC"/*.cfg; do
+        name="$(basename "$cfg" .cfg)"
+        (cd "$CSRC" && xcursorgen "$cfg" "$CDST/cursors/$name") || ok=false
+    done
+    while read -r name aliases; do
+        for a in $aliases; do ln -sf "$name" "$CDST/cursors/$a"; done
+    done < "$CSRC/aliases"
+    printf '[Icon Theme]\nName=NovaOS\nComment=Pointeur futuriste NovaOS\nInherits=Breeze_Snow\n' > "$CDST/index.theme"
+    if $ok && [ -s "$CDST/cursors/left_ptr" ]; then
+        sed -i 's/^cursorTheme=Breeze_Snow/cursorTheme=NovaOS-Cursors/' \
+            /etc/xdg/kdeglobals /etc/xdg/kcminputrc \
+            /usr/share/plasma/look-and-feel/org.novaos.desktop/contents/defaults
+        sed -i 's/^gtk-cursor-theme-name=Breeze_Snow/gtk-cursor-theme-name=NovaOS-Cursors/' /etc/xdg/gtk-3.0/settings.ini
+        mkdir -p /usr/share/icons/default
+        printf '[Icon Theme]\nInherits=NovaOS-Cursors\n' > /usr/share/icons/default/index.theme
+        # Écran de connexion SDDM : même pointeur
+        printf '[Theme]\nCursorTheme=NovaOS-Cursors\nCursorSize=24\n' > /etc/sddm.conf.d/20-novaos-cursor.conf
+        echo "[novaos] pointeur NovaOS installé ($(ls "$CDST/cursors" | wc -l) curseurs)"
+    else
+        echo "[novaos] AVERTISSEMENT : pointeur NovaOS incomplet, Breeze_Snow conservé" >&2
+    fi
+else
+    echo "[novaos] AVERTISSEMENT : xcursorgen indisponible, pointeur Breeze_Snow conservé" >&2
+fi
+rm -rf "$CSRC"
 
 # --- Applique la configuration bureau aux comptes existants (ex. user live) ---
 # Les comptes créés à l'installation l'obtiennent via /etc/skel.

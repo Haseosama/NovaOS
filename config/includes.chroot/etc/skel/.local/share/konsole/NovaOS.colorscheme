@@ -85,3 +85,9 @@ Color=45,150,160
 
 [Color7Faint]
 Color=156,163,175
+
+[General]
+Description=NovaOS
+# Verre liquide : fond translucide flouté par KWin
+Opacity=0.82
+Blur=true

@@ -14,10 +14,12 @@ Elle est **sécurisée par défaut** et **démarre automatiquement sur le bureau
 |---|---|
 | **Base** | Debian 13 « trixie » (paquets officiels, noyaux Debian, dépôts `main contrib non-free non-free-firmware`) |
 | **Bureau** | KDE Plasma 6 (Wayland par défaut, X11 disponible), Plasma 6 + Breeze Dark |
-| **Look Windows 11** | Barre des tâches centrée façon Win11, lanceur + applications épinglées (Firefox, Dolphin, Konsole, Réglages, VLC), horloge avec date, thème sombre accent `#0078D4`, curseur blanc, icônes Papirus-Dark, simple clic |
-| **Futuriste** | Écran de connexion SDDM maison (`novaos`), splash Plymouth, fonds d'écran « Bloom » et « Neon » générés pour NovaOS, `fastfetch` à l'ouverture des terminaux, logo hexagonal NovaOS |
+| **Look Windows 11** | Barre des tâches **flottante** et centrée façon Win11 (paquet de thème Plasma `org.novaos.desktop`), menu Démarrer sur la touche Windows, applications épinglées (Firefox, Dolphin, Discover, Konsole, Réglages), boutons de fenêtre à la Windows, ancrage des fenêtres aux bords, police Inter, horloge avec date, thème sombre accent `#0078D4`, curseur blanc, icônes Papirus-Dark, simple clic |
+| **Futuriste** | Écran de connexion SDDM maison (`novaos`), écran de démarrage Plymouth NovaOS (logo pulsant, barre de progression, saisie du mot de passe LUKS), menu GRUB NovaOS, style « verre liquide » NovaGlass (fenêtres, menus et terminal translucides et floutés), résolution 1920x1080 par défaut si l'écran la propose, explorateur de fichiers façon Windows (icône « Ce PC », épinglé dans la barre), fonds d'écran « Bloom » et « Neon » générés pour NovaOS, `fastfetch` à l'ouverture des terminaux, logo hexagonal NovaOS |
 | **Démarrage auto** | Connexion automatique SDDM → le bureau s'ouvre directement, sans mot de passe (désactivable en une ligne) |
 | **Sécurité** | Pare-feu UFW actif, mises à jour automatiques, AppArmor, politique de mots de passe (12 caractères + complexité), sysctl noyau durcis, aucun serveur SSH, verrouillage écran après 5 min d'inactivité, coredumps désactivés, chiffrement LUKS proposé à l'installation |
+| **Programmes Windows** | Double-clic sur un `.exe` / `.msi` → lancé ou installé avec **Wine** (64 + 32 bits), `winetricks`, et **Bottles** (à la demande, depuis Flathub) pour isoler jeux et logiciels |
+| **Boutique** | **Discover** + **Flatpak/Flathub** : des milliers d'applications en un clic |
 | **Langue** | Français par défaut (interface, AZERTY, fuseau Europe/Paris) |
 
 ## 🛠️ Prérequis (pour construire l'ISO)
@@ -92,6 +94,16 @@ NovaOS démarre directement sur le bureau KDE (session Plasma Wayland).
 - En cas de **désactivation**, le service neutralise aussi l'autologin écrit dans `/etc/sddm.conf` par live-config (session live) ou Calamares (système installé) : chez SDDM, ce fichier a la **priorité** sur `/etc/sddm.conf.d/`.
 - Après une **déconnexion**, l'écran de connexion réapparaît (politique sécurisée : `Relogin=false`).
 
+## 🪟 Programmes Windows (.exe)
+
+- **Double-cliquez** sur un `.exe` ou un `.msi` (Dolphin, bureau, téléchargements) : il se lance avec **Wine**. Un installateur s'exécute comme sous Windows, et le programme installé apparaît ensuite dans le menu Démarrer (rubrique « Wine »).
+- En ligne de commande : `novaos-wine-run setup.exe`.
+- **Réglages Windows (Wine)** : version de Windows simulée, lecteurs, audio. **Désinstaller un programme Windows** : l'équivalent de « Ajout/suppression de programmes ».
+- **Bottles** (menu Démarrer) : un environnement Windows isolé par jeu ou logiciel, avec DXVK, .NET et Visual C++ en un clic. Il est téléchargé depuis Flathub au premier lancement (≈ 600 Mo).
+- `winetricks` installe les bibliothèques Windows manquantes (`winetricks vcrun2022 dotnet48`…).
+
+> ⚠️ Un `.exe` lancé avec Wine a les mêmes droits que votre compte : n'ouvrez que des programmes de confiance. Tous les logiciels Windows ne fonctionnent pas (anti-triche de certains jeux, pilotes) : voir la base de compatibilité [appdb.winehq.org](https://appdb.winehq.org).
+
 ## 🔒 Sécurité
 
 Le détail complet des mesures, du modèle de menaces et des limites est dans **[SECURITY.md](SECURITY.md)**.
@@ -105,7 +117,7 @@ Tout se passe dans le dépôt, avant de reconstruire l'ISO :
 | Élément | Fichier |
 |---|---|
 | Palette / thème sombre | `config/includes.chroot/usr/share/color-schemes/NovaOS-Dark.colors` |
-| Barre des tâches (look Win11) | `config/includes.chroot/etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc` |
+| Barre des tâches (look Win11) | `config/includes.chroot/usr/share/plasma/look-and-feel/org.novaos.desktop/contents/layouts/org.kde.plasma.desktop-layout.js` |
 | Fonds d'écran | `config/includes.chroot/usr/share/wallpapers/` |
 | Écran de connexion (SDDM) | `config/includes.chroot/usr/share/sddm/themes/novaos/` |
 | Logo NovaOS | `assets/branding/novaos-logo.svg` (copie dans `usr/share/novaos/`) |

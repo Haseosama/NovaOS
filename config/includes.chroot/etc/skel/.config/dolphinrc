@@ -1,0 +1,37 @@
+# NovaOS — Explorateur de fichiers (Dolphin) façon Windows 11
+[General]
+# Barre d'adresse : fil d'Ariane cliquable (comme l'Explorateur Windows)
+EditableUrl=false
+ShowFullPath=false
+ShowStatusBar=true
+ShowZoomSlider=true
+RememberOpenedTabs=false
+OpenNewTabAfterLastTab=true
+# Onglets façon Windows 11 : un dossier ouvert depuis le bureau, la barre des
+# tâches ou une autre application s'ouvre dans un nouvel onglet de la fenêtre
+# déjà ouverte (Ctrl+T : nouvel onglet, clic molette : ouvrir en onglet)
+OpenExternallyCalledFolderInNewTab=true
+ShowSelectionToggle=true
+BrowseThroughArchives=true
+ConfirmClosingMultipleTabs=false
+UseTabForSwitchingSplitView=false
+Version=202
+
+[MainWindow]
+MenuBar=Disabled
+ToolBarsMovable=Disabled
+
+[PreviewSettings]
+Plugins=appimagethumbnail,audiothumbnail,blenderthumbnail,comicbookthumbnail,cursorthumbnail,djvuthumbnail,ebookthumbnail,exrthumbnail,directorythumbnail,fontthumbnail,imagethumbnail,jpegthumbnail,kraorathumbnail,windowsexethumbnail,windowsimagethumbnail,mobithumbnail,opendocumentthumbnail,gsthumbnail,rawthumbnail,svgthumbnail,ffmpegthumbs
+
+[IconsMode]
+IconSize=64
+PreviewSize=64
+
+[DetailsMode]
+PreviewSize=22
+ExpandableFolders=true
+
+[KFileDialog Settings]
+Places Icons Auto-resize=false
+Places Icons Static Size=22

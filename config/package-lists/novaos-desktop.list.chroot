@@ -58,3 +58,12 @@ fonts-inter
 fonts-jetbrains-mono
 fonts-noto-core
 fonts-noto-color-emoji
+
+# --- Modules QML de l'écran de connexion NovaOS (SDDM Qt 6) ---
+qml6-module-qtquick-controls
+qml6-module-qtquick-layouts
+qml6-module-qtquick-window
+zram-tools
+ksystemstats
+python3-pyqt6
+dbus-bin

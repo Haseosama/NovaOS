@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Bottles
+GenericName=Programmes et jeux Windows
+Comment=Environnements Windows isolés pour vos jeux et logiciels (installé à la demande)
+Exec=/usr/local/bin/novaos-bottles
+Icon=wine
+Terminal=false
+Categories=System;Emulator;
+Keywords=windows;exe;wine;jeux;games;bottles;

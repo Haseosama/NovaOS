@@ -1,0 +1,121 @@
+#!/bin/bash
+#
+# NovaOS — hook live-build : écran de verrouillage / mise en veille au thème
+# NovaOS.
+#
+# Sous Plasma 6, l'écran de verrouillage vient du paquet de shell
+# org.kde.plasma.desktop (et non du thème global). On garde toute sa logique
+# de déverrouillage telle quelle et on ajoute seulement l'habillage NovaOS :
+#   - horloge avec un halo néon cyan ;
+#   - carte de verre sombre bordée de néon derrière l'avatar et le mot de passe ;
+#   - champ mot de passe entouré d'un anneau néon (plus vif quand il a le focus).
+# Si une modification ne trouve pas son repère (autre version de Plasma), elle
+# est ignorée : l'écran reste celui de Plasma, toujours fonctionnel. Et si le
+# QML ne se charge pas, kscreenlocker bascule sur son écran de secours.
+#
+set -e
+
+DIR=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/lockscreen
+if [ ! -f "$DIR/LockScreenUi.qml" ] || [ ! -f "$DIR/MainBlock.qml" ]; then
+    echo "[novaos] AVERTISSEMENT : écran de verrouillage de Plasma introuvable, non personnalisé" >&2
+    exit 0
+fi
+
+python3 - "$DIR" <<'EOF'
+import os, sys
+
+d = sys.argv[1]
+
+def patch(name, pairs):
+    p = os.path.join(d, name)
+    s = open(p, encoding="utf-8").read()
+    if "NovaOS" in s:
+        return
+    done = 0
+    for old, new in pairs:
+        if old in s:
+            s = s.replace(old, new, 1)
+            done += 1
+        else:
+            print("[novaos] AVERTISSEMENT : repère absent dans %s : %r" % (name, old[:40]), file=sys.stderr)
+    if done:
+        open(p, "w", encoding="utf-8").write(s)
+    print("[novaos] écran de verrouillage : %s, %d/%d retouches NovaOS" % (name, done, len(pairs)))
+
+# Horloge : l'ombre noire devient un halo néon cyan
+patch("LockScreenUi.qml", [
+    ("""            radius: 6
+            samples: 14
+            spread: 0.3
+            color : "black" // shadows should always be black""",
+     """            radius: 18
+            samples: 37
+            spread: 0.35
+            color : "#c022d3ee" // NovaOS : halo néon cyan autour de l'horloge"""),
+])
+
+# Carte de verre néon + anneau néon autour du mot de passe. Ces éléments sont
+# créés par des Component (les enfants déclarés directement iraient dans la
+# mise en page du formulaire).
+patch("MainBlock.qml", [
+    ("""    signal passwordResult(string password)
+""",
+     """    signal passwordResult(string password)
+
+    // NovaOS : carte de verre sombre bordée de néon derrière l'avatar et le
+    // mot de passe, et anneau néon autour du champ mot de passe
+    property Component novaCardComponent: Component {
+        Item {
+            z: -1
+            width: Kirigami.Units.gridUnit * 22
+            height: Kirigami.Units.gridUnit * 19
+            x: (parent.width - width) / 2
+            y: parent.height / 2 - Kirigami.Units.gridUnit * 12.5
+            opacity: sessionManager.lockScreenUiVisible ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: Kirigami.Units.longDuration } }
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -6
+                radius: 26
+                color: "transparent"
+                border.width: 6
+                border.color: Qt.rgba(0.13, 0.83, 0.93, 0.10)
+            }
+            Rectangle {
+                anchors.fill: parent
+                radius: 20
+                color: Qt.rgba(0.03, 0.06, 0.12, 0.62)
+                border.width: 1
+                border.color: Qt.rgba(0.13, 0.83, 0.93, 0.55)
+            }
+            Rectangle {
+                anchors.top: parent.top
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.width * 0.5
+                height: 2
+                radius: 1
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: "transparent" }
+                    GradientStop { position: 0.5; color: "#22d3ee" }
+                    GradientStop { position: 1.0; color: "transparent" }
+                }
+            }
+        }
+    }
+    property Component novaRingComponent: Component {
+        Rectangle {
+            z: -1
+            anchors.fill: parent
+            anchors.margins: -3
+            radius: 9
+            color: "transparent"
+            border.width: 2
+            border.color: parent.activeFocus ? "#22d3ee" : Qt.rgba(0.65, 0.55, 0.98, 0.65)
+        }
+    }
+    property Item novaCard: novaCardComponent.createObject(sessionManager)
+    property Item novaRing: novaRingComponent.createObject(passwordBox)
+"""),
+])
+EOF

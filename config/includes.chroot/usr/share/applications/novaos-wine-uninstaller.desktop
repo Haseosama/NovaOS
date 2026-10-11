@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Désinstaller un programme Windows
+GenericName=Ajout/suppression de programmes (Wine)
+Comment=Supprimer les programmes Windows installés
+Exec=wine uninstaller
+Icon=wine
+Terminal=false
+Categories=System;Emulator;
+Keywords=windows;exe;wine;uninstall;desinstaller;

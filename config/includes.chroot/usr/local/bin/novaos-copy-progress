@@ -1,0 +1,604 @@
+#!/usr/bin/python3
+# NovaOS — fenêtre de copie façon Windows 11, avec le graphique de vitesse.
+#
+# Dolphin (KIO) envoie l'avancement de chaque copie/déplacement à Plasma par
+# D-Bus (interface org.kde.JobViewV2/V3, méthodes update et terminate). Ce
+# programme écoute ces messages sans rien modifier (dbus-monitor) et affiche,
+# pour chaque copie qui dure plus d'une seconde, une fenêtre avec :
+#   - « 45 % terminé », la source et la destination ;
+#   - la courbe du débit qui se remplit derrière la progression, avec
+#     « Vitesse : 85,3 Mo/s » sur la ligne de vitesse actuelle ;
+#   - le nom du fichier en cours, le temps restant et les éléments restants.
+# Boutons Pause / Reprendre / Arrêter : la copie est faite par un processus
+# « kioworker » de KIO ; on retrouve celui qui a un fichier ouvert dans la
+# source ou la destination et on le suspend (SIGSTOP), le relance (SIGCONT) ou
+# l'arrête (SIGTERM). La notification de Plasma garde aussi ses boutons.
+#
+# Test hors session : novaos-copy-progress --replay fichier (sortie de
+# dbus-monitor enregistrée), --screenshot image.png pour une capture.
+
+import os
+import re
+import signal
+from urllib.parse import unquote, urlparse
+import sys
+import time
+
+try:
+    from PyQt6.QtCore import Qt, QTimer, QProcess, QPointF, QRectF
+    from PyQt6.QtGui import (QColor, QPainter, QPainterPath, QPen, QFont,
+                             QLinearGradient, QGuiApplication)
+    from PyQt6.QtWidgets import (QApplication, QWidget, QLabel, QVBoxLayout,
+                                 QHBoxLayout, QPushButton)
+except ImportError:  # tests locaux
+    from PySide6.QtCore import Qt, QTimer, QProcess, QPointF, QRectF
+    from PySide6.QtGui import (QColor, QPainter, QPainterPath, QPen, QFont,
+                               QLinearGradient, QGuiApplication)
+    from PySide6.QtWidgets import (QApplication, QWidget, QLabel, QVBoxLayout,
+                                   QHBoxLayout, QPushButton)
+
+CYAN = QColor("#22d3ee")
+VIOLET = QColor("#a78bfa")
+TEXT = "#e6f1ff"
+DIM = "#8aa0b8"
+SHOW_DELAY = 1.0      # pas de fenêtre pour les copies instantanées
+CLOSE_DELAY = 2500    # ms d'affichage de « Terminé »
+
+
+def human_size(n):
+    n = float(n)
+    for unit in ("octets", "Ko", "Mo", "Go", "To"):
+        if n < 1024 or unit == "To":
+            if unit == "octets":
+                return "%d octets" % n
+            return ("%.1f %s" % (n, unit)).replace(".", ",")
+        n /= 1024
+
+
+def human_time(s):
+    s = int(s)
+    if s < 5:
+        return "quelques secondes"
+    if s < 60:
+        return "environ %d secondes" % s
+    if s < 3600:
+        m = round(s / 60)
+        return "environ %d minute%s" % (m, "s" if m > 1 else "")
+    h, m = divmod(round(s / 60), 60)
+    return "environ %d h %02d min" % (h, m)
+
+
+def short_place(url):
+    url = re.sub(r"^file://", "", url or "")
+    url = url.rstrip("/")
+    return url.rsplit("/", 1)[-1] or url or "?"
+
+
+class SpeedGraph(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setMinimumHeight(120)
+        self.samples = []   # (pourcentage, octets/s)
+        self.percent = 0.0
+        self.speed = 0.0
+
+    def add(self, percent, speed):
+        self.percent = max(0.0, min(100.0, percent))
+        self.speed = speed
+        if speed > 0:
+            if self.samples and abs(self.samples[-1][0] - self.percent) < 0.2:
+                self.samples[-1] = (self.percent, speed)
+            else:
+                self.samples.append((self.percent, speed))
+        self.update()
+
+    def paintEvent(self, _ev):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        r = QRectF(self.rect()).adjusted(1, 1, -1, -1)
+        p.setPen(QPen(QColor(34, 211, 238, 90), 1))
+        p.setBrush(QColor(8, 16, 30, 200))
+        p.drawRoundedRect(r, 12, 12)
+        # avancement : fond plus clair jusqu'au pourcentage actuel
+        done = QRectF(r.left(), r.top(), r.width() * self.percent / 100, r.height())
+        g = QLinearGradient(done.topLeft(), done.topRight())
+        g.setColorAt(0, QColor(34, 211, 238, 25))
+        g.setColorAt(1, QColor(34, 211, 238, 55))
+        path_clip = QPainterPath()
+        path_clip.addRoundedRect(r, 12, 12)
+        p.setClipPath(path_clip)
+        p.fillRect(done, g)
+        # grille
+        p.setPen(QPen(QColor(138, 160, 184, 35), 1))
+        for i in range(1, 4):
+            y = r.top() + r.height() * i / 4
+            p.drawLine(QPointF(r.left(), y), QPointF(r.right(), y))
+        for i in range(1, 10):
+            x = r.left() + r.width() * i / 10
+            p.drawLine(QPointF(x, r.top()), QPointF(x, r.bottom()))
+        if self.samples:
+            top = max(s for _, s in self.samples) * 1.25
+            pts = [QPointF(r.left() + r.width() * pc / 100,
+                           r.bottom() - r.height() * sp / top)
+                   for pc, sp in self.samples]
+            area = QPainterPath(QPointF(r.left(), r.bottom()))
+            area.lineTo(QPointF(r.left(), pts[0].y()))
+            for pt in pts:
+                area.lineTo(pt)
+            area.lineTo(QPointF(pts[-1].x(), r.bottom()))
+            area.closeSubpath()
+            fill = QLinearGradient(QPointF(0, r.top()), QPointF(0, r.bottom()))
+            fill.setColorAt(0, QColor(34, 211, 238, 170))
+            fill.setColorAt(1, QColor(167, 139, 250, 60))
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(fill)
+            p.drawPath(area)
+            line = QPainterPath(QPointF(r.left(), pts[0].y()))
+            for pt in pts:
+                line.lineTo(pt)
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.setPen(QPen(CYAN, 2))
+            p.drawPath(line)
+            # ligne de vitesse actuelle, comme Windows 11
+            y = r.bottom() - r.height() * self.speed / top
+            p.setPen(QPen(QColor(230, 241, 255, 160), 1, Qt.PenStyle.DashLine))
+            p.drawLine(QPointF(r.left(), y), QPointF(r.right(), y))
+            label = "Vitesse : %s/s" % human_size(self.speed)
+            f = QFont(self.font())
+            f.setPointSizeF(f.pointSizeF() * 0.95)
+            p.setFont(f)
+            w = p.fontMetrics().horizontalAdvance(label) + 14
+            box = QRectF(r.right() - w - 6, max(r.top() + 4, y - 24), w, 20)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QColor(8, 16, 30, 220))
+            p.drawRoundedRect(box, 6, 6)
+            p.setPen(QColor(TEXT))
+            p.drawText(box, Qt.AlignmentFlag.AlignCenter, label)
+        # curseur d'avancement néon
+        x = r.left() + r.width() * self.percent / 100
+        p.setPen(QPen(VIOLET, 2))
+        p.drawLine(QPointF(x, r.top()), QPointF(x, r.bottom()))
+        p.end()
+
+
+class CopyWindow(QWidget):
+    def __init__(self, on_close):
+        super().__init__()
+        self.on_close = on_close
+        self.setWindowTitle("Copie en cours")
+        # fenêtre sans bordure système, aux bords arrondis, déplaçable à la souris
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint
+                            | Qt.WindowType.WindowStaysOnTopHint
+                            | Qt.WindowType.Tool)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.drag = None
+        self.setMinimumWidth(520)
+        self.setStyleSheet(
+            "QLabel { color: %s; background: transparent; }"
+            "QLabel#dim { color: %s; }"
+            "QPushButton { color: %s; background: rgba(34,211,238,30);"
+            " border: 1px solid rgba(34,211,238,120); border-radius: 14px;"
+            " padding: 6px 18px; }"
+            "QPushButton:hover { background: rgba(34,211,238,70); }"
+            % (TEXT, DIM, TEXT))
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        card = QWidget(objectName="card")
+        outer.addWidget(card)
+        lay = QVBoxLayout(card)
+        lay.setContentsMargins(20, 16, 20, 16)
+        lay.setSpacing(8)
+        self.title = QLabel("Copie")
+        self.title.setWordWrap(True)
+        self.percent = QLabel("0 % terminé")
+        f = self.percent.font()
+        f.setPointSizeF(f.pointSizeF() * 1.6)
+        f.setWeight(QFont.Weight.DemiBold)
+        self.percent.setFont(f)
+        self.graph = SpeedGraph()
+        self.name = QLabel(objectName="dim")
+        self.remaining = QLabel(objectName="dim")
+        self.items = QLabel(objectName="dim")
+        for w in (self.name, self.remaining, self.items):
+            w.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        lay.addWidget(self.title)
+        lay.addWidget(self.percent)
+        lay.addWidget(self.graph)
+        lay.addWidget(self.name)
+        lay.addWidget(self.remaining)
+        lay.addWidget(self.items)
+        row = QHBoxLayout()
+        self.pause = QPushButton("Pause")
+        self.stop = QPushButton("Arrêter")
+        self.stop.setStyleSheet("QPushButton { background: rgba(248,113,113,35);"
+                                " border-color: rgba(248,113,113,150); }"
+                                "QPushButton:hover { background: rgba(248,113,113,80); }")
+        row.addWidget(self.pause)
+        row.addWidget(self.stop)
+        row.addStretch(1)
+        hide = QPushButton("Masquer")
+        hide.clicked.connect(self.close)
+        row.addWidget(hide)
+        lay.addLayout(row)
+
+    def paintEvent(self, _ev):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        r = QRectF(self.rect()).adjusted(1, 1, -1, -1)
+        p.setPen(QPen(QColor(34, 211, 238, 140), 1))
+        p.setBrush(QColor(10, 18, 32, 238))
+        p.drawRoundedRect(r, 18, 18)
+        p.end()
+
+    def mousePressEvent(self, ev):
+        if ev.button() == Qt.MouseButton.LeftButton:
+            handle = self.windowHandle()
+            if handle and hasattr(handle, "startSystemMove") and handle.startSystemMove():
+                return
+            self.drag = ev.globalPosition().toPoint() - self.pos()
+
+    def mouseMoveEvent(self, ev):
+        if self.drag is not None:
+            self.move(ev.globalPosition().toPoint() - self.drag)
+
+    def mouseReleaseEvent(self, _ev):
+        self.drag = None
+
+    def closeEvent(self, ev):
+        self.on_close()
+        super().closeEvent(ev)
+
+
+def local_path(url):
+    if not url:
+        return ""
+    if url.startswith("/"):
+        return url.rstrip("/")
+    u = urlparse(url)
+    return unquote(u.path).rstrip("/") if u.scheme == "file" else ""
+
+
+def find_workers(places):
+    """Processus kioworker de l'utilisateur qui ont un fichier ouvert dans
+    l'un des dossiers donnés (source ou destination de la copie)."""
+    places = [p for p in places if p]
+    found = []
+    uid = os.getuid()
+    for pid in os.listdir("/proc"):
+        if not pid.isdigit():
+            continue
+        try:
+            if os.stat("/proc/" + pid).st_uid != uid:
+                continue
+            argv0 = open("/proc/%s/cmdline" % pid, "rb").read().split(b"\0")[0]
+            if b"kioworker" not in argv0 and b"kioslave" not in argv0:
+                continue
+            for fd in os.listdir("/proc/%s/fd" % pid):
+                try:
+                    target = os.readlink("/proc/%s/fd/%s" % (pid, fd))
+                except OSError:
+                    continue
+                if any(target == p or target.startswith(p + "/") for p in places):
+                    found.append(int(pid))
+                    break
+        except OSError:
+            continue
+    return found
+
+
+class Job:
+    def __init__(self, path):
+        self.path = path
+        self.start = time.monotonic()
+        self.data = {}
+        self.window = None
+        self.hidden = False
+        self.finished = False
+        self.last = None   # (instant, octets copiés) pour calculer la vitesse
+        self.speed = 0.0
+        self.paused = False
+        self.pids = []
+        self.note = ""
+
+    def places(self):
+        d = self.data
+        return [local_path(d.get("descriptionValue1", "")),
+                local_path(d.get("descriptionValue2", "") or d.get("destUrl", ""))]
+
+    def signal_workers(self, sig):
+        pids = find_workers(self.places()) or self.pids
+        ok = []
+        for pid in pids:
+            try:
+                os.kill(pid, sig)
+                ok.append(pid)
+            except OSError:
+                pass
+        if ok:
+            self.pids = ok
+        return bool(ok)
+
+    def toggle_pause(self):
+        w = self.window
+        if not self.paused:
+            if self.signal_workers(signal.SIGSTOP):
+                self.paused = True
+                w.pause.setText("Reprendre")
+                self.speed = 0.0
+            else:
+                self.note = "Pause impossible ici : utilisez la notification de Plasma"
+        else:
+            self.signal_workers(signal.SIGCONT)
+            self.paused = False
+            w.pause.setText("Pause")
+            self.last = None
+        self.refresh_now()
+
+    def stop(self):
+        # le processus doit tourner pour recevoir l'arrêt
+        if self.paused:
+            self.signal_workers(signal.SIGCONT)
+        if self.signal_workers(signal.SIGTERM):
+            self.paused = False
+            self.window.percent.setText("Copie arrêtée")
+            self.window.pause.setEnabled(False)
+            self.window.stop.setEnabled(False)
+        else:
+            self.note = "Arrêt impossible ici : utilisez la notification de Plasma"
+
+    def refresh_now(self):
+        if self.window:
+            self.window.graph.add(self.percent(), self.speed)
+
+    def update(self, fields):
+        self.data.update(fields)
+        d = self.data
+        done = d.get("processedBytes")
+        now = time.monotonic()
+        if done is not None and not self.paused:
+            if self.last and now - self.last[0] >= 0.5:
+                inst = (done - self.last[1]) / (now - self.last[0])
+                self.speed = inst if not self.speed else 0.6 * self.speed + 0.4 * inst
+                self.last = (now, done)
+            elif not self.last:
+                self.last = (now, done)
+        if d.get("speed") and not self.paused:
+            self.speed = float(d["speed"])
+
+    def percent(self):
+        d = self.data
+        if d.get("totalBytes") and d.get("processedBytes") is not None:
+            return 100.0 * d["processedBytes"] / d["totalBytes"]
+        return float(d.get("percent", 0))
+
+    def refresh(self, app):
+        if self.finished or self.hidden:
+            return
+        if self.window is None:
+            if time.monotonic() - self.start < SHOW_DELAY:
+                return
+            self.window = CopyWindow(self.closed)
+            self.window.pause.clicked.connect(self.toggle_pause)
+            self.window.stop.clicked.connect(self.stop)
+            self.window.show()
+            app.place_windows()
+        d = self.data
+        w = self.window
+        verb = d.get("title") or "Copie"
+        src = d.get("descriptionValue1", "")
+        dst = d.get("descriptionValue2", "") or d.get("destUrl", "")
+        n = d.get("totalFiles", 0)
+        what = ("%d élément%s" % (n, "s" if n > 1 else "")) if n else ""
+        title = verb
+        if what:
+            title += " de " + what
+        if src:
+            title += " depuis <b>%s</b>" % short_place(src)
+        if dst:
+            title += " vers <b>%s</b>" % short_place(dst)
+        w.title.setText(title)
+        pc = self.percent()
+        w.percent.setText(("%d %% terminé" % pc) + ("  —  en pause" if self.paused else ""))
+        w.setWindowTitle("%d %% terminé — %s" % (pc, verb))
+        w.graph.add(pc, self.speed)
+        name = d.get("infoMessage", "")
+        if src and "/" in src and not n > 1:
+            name = short_place(src)
+        w.name.setText("Nom : " + name if name else "")
+        tb, pb = d.get("totalBytes"), d.get("processedBytes")
+        if self.note:
+            w.remaining.setText(self.note)
+        elif self.paused:
+            w.remaining.setText("Temps restant : copie en pause")
+        elif tb and pb is not None and self.speed > 0:
+            w.remaining.setText("Temps restant : " + human_time((tb - pb) / self.speed))
+        else:
+            w.remaining.setText("Temps restant : calcul en cours…")
+        left = []
+        if n:
+            left.append("%d" % max(0, n - d.get("processedFiles", 0)))
+        if tb and pb is not None:
+            left.append("(%s)" % human_size(max(0, tb - pb)))
+        w.items.setText("Éléments restants : " + " ".join(left) if left else "")
+
+    def finish(self, error, app):
+        self.finished = True
+        w = self.window
+        if w is None:
+            return
+        w.pause.setEnabled(False)
+        w.stop.setEnabled(False)
+        if error:
+            w.percent.setText("Interrompu")
+        else:
+            w.percent.setText("100 % terminé")
+            w.graph.add(100, self.speed)
+            w.remaining.setText("Terminé")
+            w.items.setText("")
+        QTimer.singleShot(CLOSE_DELAY, w.close)
+
+    def closed(self):
+        self.hidden = True
+
+
+VALUE = re.compile(r'^\s*variant\s+(\w+)\s+(.*)$')
+HEADER = re.compile(r'^method call .*path=([^;]+); interface=([^;]+); member=(\w+)')
+
+
+def parse_scalar(kind, raw):
+    raw = raw.strip()
+    if kind == "string":
+        return raw[1:-1].replace('\\"', '"') if raw.startswith('"') else raw
+    if kind == "boolean":
+        return raw == "true"
+    if kind == "double":
+        return float(raw)
+    try:
+        return int(raw)
+    except ValueError:
+        return raw
+
+
+class Monitor:
+    """Lit la sortie de dbus-monitor et suit les copies en cours."""
+
+    def __init__(self, app):
+        self.app = app
+        self.jobs = {}
+        self.cur = None      # (chemin, méthode) du message en cours de lecture
+        self.fields = {}
+        self.key = None
+        self.args = []
+        self.last_line = 0.0
+
+    def feed_line(self, line):
+        self.last_line = time.monotonic()
+        m = HEADER.match(line)
+        if m:
+            self.flush()
+            path, iface, member = m.groups()
+            if iface.startswith("org.kde.JobView") and member in ("update", "terminate"):
+                self.cur = (path, member)
+            return
+        if not self.cur:
+            return
+        s = line.strip()
+        if s.startswith("string ") and self.key is None and self.cur[1] == "update":
+            self.key = parse_scalar("string", s[7:])
+            return
+        v = VALUE.match(line)
+        if v and self.key is not None:
+            self.fields[self.key] = parse_scalar(*v.groups())
+            self.key = None
+            return
+        if self.cur[1] == "terminate":
+            t = s.split(None, 1)
+            if len(t) == 2 and t[0] in ("uint32", "int32", "string"):
+                self.args.append(parse_scalar(*t))
+
+    def flush(self):
+        if not self.cur:
+            return
+        path, member = self.cur
+        job = self.jobs.get(path)
+        if member == "update":
+            if job is None or job.finished:
+                job = self.jobs[path] = Job(path)
+            job.update(self.fields)
+            job.refresh(self.app)
+        elif job:
+            job.finish(self.args[0] if self.args else 0, self.app)
+        self.cur, self.fields, self.key, self.args = None, {}, None, []
+
+    def tick(self):
+        # un message est complet quand le suivant commence, ou quand
+        # dbus-monitor n'a plus rien écrit depuis un instant
+        if self.cur and time.monotonic() - self.last_line > 0.3:
+            self.flush()
+        for path, job in list(self.jobs.items()):
+            job.refresh(self.app)
+            if job.finished and (job.window is None or not job.window.isVisible()):
+                del self.jobs[path]
+
+
+class App(QApplication):
+    def place_windows(self):
+        scr = QGuiApplication.primaryScreen()
+        if not scr:
+            return
+        geo = scr.availableGeometry()
+        y = geo.bottom() - 16
+        for job in self.monitor.jobs.values():
+            w = job.window
+            if w is None or not w.isVisible():
+                continue
+            w.adjustSize()
+            y -= w.height()
+            w.move(geo.right() - w.width() - 16, y)
+            y -= 12
+
+
+def main():
+    app = App(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
+    app.setApplicationName("novaos-copy-progress")
+    mon = app.monitor = Monitor(app)
+    args = sys.argv[1:]
+    shot = None
+    if "--screenshot" in args:
+        shot = args[args.index("--screenshot") + 1]
+    if "--replay" in args:
+        # relit une sortie enregistrée, une ligne de message par 50 ms
+        lines = open(args[args.index("--replay") + 1]).read().splitlines()
+        state = {"i": 0}
+
+        def step():
+            while state["i"] < len(lines):
+                line = lines[state["i"]]
+                state["i"] += 1
+                mon.feed_line(line)
+                if line.startswith("method call"):
+                    return
+            mon.flush()
+            timer.stop()
+            if shot:
+                for j in mon.jobs.values():
+                    if j.window:
+                        j.window.grab().save(shot)
+                        break
+                app.quit()
+        global SHOW_DELAY
+        SHOW_DELAY = 0
+        timer = QTimer()
+        timer.timeout.connect(step)
+        timer.start(50)
+        return app.exec()
+    proc = QProcess()
+    buf = {"s": ""}
+
+    def read():
+        buf["s"] += bytes(proc.readAllStandardOutput()).decode("utf-8", "replace")
+        *done, buf["s"] = buf["s"].split("\n")
+        for line in done:
+            mon.feed_line(line)
+
+    def ended(*_a):
+        mon.flush()
+        QTimer.singleShot(5000, start)
+
+    def start():
+        proc.start("dbus-monitor", ["--session",
+                                    "type='method_call',member='update'",
+                                    "type='method_call',member='terminate'"])
+
+    proc.readyReadStandardOutput.connect(read)
+    proc.finished.connect(ended)
+    start()
+    t = QTimer()
+    t.timeout.connect(mon.tick)
+    t.start(500)
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

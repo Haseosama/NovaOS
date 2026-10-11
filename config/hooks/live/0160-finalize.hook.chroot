@@ -30,25 +30,55 @@ if [ -f /etc/default/keyboard ]; then
         /etc/default/keyboard
 fi
 
-# --- Plymouth : thème « spinner » (futuriste) si disponible ---
+# --- Plymouth : écran de démarrage NovaOS ---
+# Thème maison /usr/share/plymouth/themes/novaos (remplace le thème Debian).
 apt-get install -y plymouth-themes >/dev/null 2>&1 || true
-if [ -f /etc/plymouth/plymouthd.conf ]; then
-    if [ -d /usr/share/plymouth/themes/spinner ]; then
-        THEME=spinner
-    elif [ -d /usr/share/plymouth/themes/solar ]; then
-        THEME=solar
-    else
-        THEME=details
+if [ -f /usr/share/plymouth/themes/novaos/novaos.plymouth ]; then
+    if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+        plymouth-set-default-theme novaos
     fi
-    sed -i \
-        -e "s/^Theme=.*/Theme=$THEME/" \
-        -e 's/^ShowDelay=.*/ShowDelay=0/' \
-        /etc/plymouth/plymouthd.conf
+    # Debian choisit le thème via une alternative (desktop-base) : on la
+    # pointe aussi sur NovaOS.
+    update-alternatives --install /usr/share/plymouth/themes/default.plymouth \
+        default.plymouth /usr/share/plymouth/themes/novaos/novaos.plymouth 200 \
+        >/dev/null 2>&1 || true
+    update-alternatives --set default.plymouth \
+        /usr/share/plymouth/themes/novaos/novaos.plymouth >/dev/null 2>&1 || true
+    mkdir -p /etc/plymouth
+    printf '[Daemon]\nTheme=novaos\nShowDelay=0\n' > /etc/plymouth/plymouthd.conf
+    # Le thème est chargé depuis l'initramfs : on le régénère
+    update-initramfs -u -k all \
+        || echo "[novaos] AVERTISSEMENT : initramfs non régénéré (live-build le refera)." >&2
 fi
+
+# --- GRUB (système installé) : NovaOS au lieu de Debian ---
+mkdir -p /etc/default/grub.d
+cat > /etc/default/grub.d/90-novaos.cfg <<'GRUBEOF'
+# NovaOS — menu de démarrage
+GRUB_DISTRIBUTOR="NovaOS"
+GRUB_BACKGROUND="/usr/share/novaos/grub-background.png"
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"
+GRUB_TIMEOUT=3
+GRUBEOF
 
 # --- Nettoyage ---
 apt-get clean
 rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* 2>/dev/null || true
 mkdir -p /var/lib/apt/lists/partial
+
+# --- Pas de fenêtre « Bienvenue dans KDE Plasma » au lancement ---
+# (NovaOS a son propre message de bienvenue : novaos-welcome)
+# Désactivation par fichier masqué (sans désinstaller : des métapaquets KDE
+# en dépendent). ~/.config/autostart n'est pas utilisé : /etc/xdg/autostart
+# est remplacé à l'identique et dpkg-divert protège des mises à jour.
+for f in /etc/xdg/autostart/*welcome*.desktop; do
+    [ -e "$f" ] || continue
+    case "$f" in */novaos-welcome.desktop) continue ;; esac
+    if grep -qi 'plasma-welcome' "$f"; then
+        dpkg-divert --quiet --local --rename --add "$f" 2>/dev/null || rm -f "$f"
+        printf '[Desktop Entry]\nType=Application\nName=Plasma Welcome\nExec=plasma-welcome\nHidden=true\n' > "$f"
+    fi
+done
+echo "[novaos] plasma-welcome retiré"
 
 exit 0

@@ -12,10 +12,68 @@ MARKER_DIR="$HOME/.config/novaos"
 MARKER="$MARKER_DIR/welcome-shown"
 
 mkdir -p "$MARKER_DIR" 2>/dev/null || true
+
+# — Barre des tâches NovaOS : recréée à chaque session si elle manque —
+# (le script ne fait rien quand une barre existe déjà). Lancé en
+# arrière-plan pour ne pas retarder le message de bienvenue.
+novaos_ensure_panel() {
+    local script=/usr/share/novaos/novaos-panel.js
+    local log="$MARKER_DIR/plasma-layout.log"
+    [ -r "$script" ] || return 0
+    command -v dbus-send >/dev/null 2>&1 || return 0
+    # Attendre que plasmashell soit prêt (jusqu'à ~30 s)
+    local i
+    for i in $(seq 1 30); do
+        if dbus-send --session --print-reply --dest=org.freedesktop.DBus \
+            /org/freedesktop/DBus org.freedesktop.DBus.NameHasOwner \
+            string:org.kde.plasmashell 2>/dev/null | grep -q "boolean true"; then
+            break
+        fi
+        sleep 1
+    done
+    sleep 3
+    {
+        date
+        dbus-send --session --print-reply --dest=org.kde.plasmashell /PlasmaShell \
+            org.kde.PlasmaShell.evaluateScript "string:$(cat "$script")" 2>&1
+    } >"$log" 2>&1 || true
+}
+novaos_ensure_panel &
+
 if [ -f "$MARKER" ]; then
+    wait
     exit 0
 fi
 touch "$MARKER" 2>/dev/null || true
+
+# — Thème NovaOS appliqué au compte dès la première session —
+# (les réglages système de /etc/xdg suffisent normalement ; on les inscrit
+# aussi dans ~/.config pour qu'aucun ancien réglage Breeze ne reprenne le dessus)
+if command -v plasma-apply-colorscheme >/dev/null 2>&1; then
+    plasma-apply-colorscheme NovaOS-Dark >/dev/null 2>&1 || true
+fi
+if command -v plasma-apply-desktoptheme >/dev/null 2>&1; then
+    plasma-apply-desktoptheme novaglass >/dev/null 2>&1 || true
+fi
+KWC="$(command -v kwriteconfig6 || command -v kwriteconfig5 || true)"
+if [ -n "$KWC" ]; then
+    "$KWC" --file kdeglobals --group KDE --key LookAndFeelPackage org.novaos.desktop
+    "$KWC" --file kdeglobals --group Icons --key Theme NovaOS
+    # Double-clic pour ouvrir (comme sous Windows)
+    "$KWC" --file kdeglobals --group KDE --key SingleClick false
+    CURSOR="$(sed -n 's/^cursorTheme=//p' /etc/xdg/kcminputrc 2>/dev/null | head -n1)"
+    [ -n "$CURSOR" ] && "$KWC" --file kcminputrc --group Mouse --key cursorTheme "$CURSOR"
+    if grep -q '^widgetStyle=kvantum' /etc/xdg/kdeglobals 2>/dev/null; then
+        "$KWC" --file kdeglobals --group KDE --key widgetStyle kvantum
+    fi
+    DECO_LIB="$(sed -n 's/^library=//p' /etc/xdg/kwinrc | head -n1)"
+    DECO_THEME="$(sed -n 's/^theme=//p' /etc/xdg/kwinrc | head -n1)"
+    "$KWC" --file kwinrc --group org.kde.kdecoration2 --key library "${DECO_LIB:-org.kde.breeze}"
+    "$KWC" --file kwinrc --group org.kde.kdecoration2 --key theme "${DECO_THEME:-Breeze}"
+    "$KWC" --file kwinrc --group Plugins --key blurEnabled true
+    "$KWC" --file kwinrc --group Plugins --key contrastEnabled true
+    command -v qdbus6 >/dev/null 2>&1 && qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
+fi
 
 # — Fond d'écran NovaOS (au cas où le thème n'aurait pas été appliqué) —
 if command -v plasma-apply-wallpaper >/dev/null 2>&1; then
@@ -27,7 +85,24 @@ MESSAGE="Bienvenue dans NovaOS 2026.10 !
 
 NovaOS est basé sur Debian 13 « trixie » et propose un bureau KDE Plasma 6 au look futuriste inspiré de Windows 11.
 
+Programmes Windows (.exe) :
+  • Double-cliquez sur un fichier .exe ou .msi : il se lance (ou s'installe) avec Wine, comme sous Windows.
+  • Les programmes installés apparaissent dans le menu Démarrer (rubrique « Wine »).
+  • Pour les jeux et logiciels exigeants, ouvrez « Bottles » : un environnement Windows isolé par programme.
+  • Les autres applications s'installent depuis la boutique « Discover ».
+
+Raccourcis futuristes :
+  • Touche Windows : menu Démarrer · Meta+W : vue d'ensemble · Alt+Espace : recherche universelle (KRunner).
+  • Glissez une fenêtre en haut de l'écran pour l'agrandir, sur un côté pour la moitié de l'écran.
+  • Tapez directement sur le bureau (ou Alt+Espace) : la recherche s'ouvre au centre, façon Spotlight.
+  • 4 bureaux virtuels : Ctrl+Meta+← / → · coin supérieur gauche : vue d'ensemble.
+  • Copies de fichiers : fenêtre avec le graphique de vitesse, comme Windows 11.
+  • Explorateur : Ctrl+T ouvre un nouvel onglet, clic molette sur un dossier l'ouvre en onglet.
+  • Jeux : Steam (avec Proton), Lutris et Heroic dans le menu Jeux ; GameMode et MangoHud s'activent avec « gamemoderun mangohud %command% » dans les options de lancement Steam.
+  • Meta+T : dispositions de fenêtres en mosaïque · le soir, l'écran passe en lumière chaude.
+
 Quelques conseils pour rester en sécurité :
+  • N'ouvrez que des .exe de confiance : Wine les exécute avec vos droits.
   • Verrouillez votre session (Ctrl+Alt+L) quand vous vous éloignez.
   • Le pare-feu (UFW) est actif : gérez-le avec l'application « Pare-feu » (Gufw).
   • Les mises à jour de sécurité s'installent automatiquement.
@@ -45,4 +120,5 @@ elif command -v zenity >/dev/null 2>&1; then
     zenity --info --title "Bienvenue dans NovaOS" --text "$MESSAGE" >/dev/null 2>&1 || true
 fi
 
+wait
 exit 0

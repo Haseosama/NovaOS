@@ -27,8 +27,8 @@ ForegroundNegative=218,68,83,255
 ForegroundNeutral=246,116,0,255
 ForegroundPositive=39,174,96,255
 ForegroundVisited=127,140,141,255
-DecorationFocus=0,120,212,255
-DecorationHover=61,174,233,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255
 
 [Colors:Complementary]
 BackgroundNormal=35,38,41,255
@@ -39,8 +39,8 @@ ForegroundNegative=218,68,83,255
 ForegroundNeutral=246,116,0,255
 ForegroundPositive=39,174,96,255
 ForegroundVisited=127,140,141,255
-DecorationFocus=0,120,212,255
-DecorationHover=61,174,233,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255
 
 [Colors:Selection]
 BackgroundNormal=0,120,212,255
@@ -51,8 +51,8 @@ ForegroundNegative=218,68,83,255
 ForegroundNeutral=246,116,0,255
 ForegroundPositive=39,174,96,255
 ForegroundVisited=127,140,141,255
-DecorationFocus=0,120,212,255
-DecorationHover=61,174,233,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255
 
 [Colors:Tooltip]
 BackgroundNormal=35,38,41,255
@@ -63,8 +63,8 @@ ForegroundNegative=218,68,83,255
 ForegroundNeutral=246,116,0,255
 ForegroundPositive=39,174,96,255
 ForegroundVisited=127,140,141,255
-DecorationFocus=0,120,212,255
-DecorationHover=61,174,233,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255
 
 [Colors:View]
 BackgroundNormal=35,38,41,255
@@ -75,20 +75,20 @@ ForegroundNegative=218,68,83,255
 ForegroundNeutral=246,116,0,255
 ForegroundPositive=39,174,96,255
 ForegroundVisited=127,140,141,255
-DecorationFocus=0,120,212,255
-DecorationHover=61,174,233,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255
 
 [Colors:Window]
-BackgroundNormal=49,54,59,255
-BackgroundAlternate=35,38,41,255
+BackgroundNormal=24,28,40,255
+BackgroundAlternate=19,22,32,255
 ForegroundNormal=239,240,241,255
 ForegroundInactive=189,195,199,255
 ForegroundNegative=218,68,83,255
 ForegroundNeutral=246,116,0,255
 ForegroundPositive=39,174,96,255
 ForegroundVisited=127,140,141,255
-DecorationFocus=0,120,212,255
-DecorationHover=61,174,233,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255
 
 [General]
 ColorScheme=NovaOS-Dark
@@ -96,9 +96,9 @@ Name=NovaOS Dark
 shadeSortColumn=true
 
 [WM]
-activeBackground=0,120,212,255
-activeBlend=0,120,212,255
-activeForeground=255,255,255,255
-inactiveBackground=49,54,59,255
-inactiveForeground=189,195,199,255
-inactiveBlend=239,240,241,255
+activeBackground=18,22,34,190
+activeBlend=18,22,34,190
+activeForeground=239,240,241,255
+inactiveBackground=18,22,34,165
+inactiveBlend=18,22,34,165
+inactiveForeground=150,158,170,255

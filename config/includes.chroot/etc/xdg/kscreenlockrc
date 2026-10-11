@@ -8,3 +8,7 @@ LockOnResume=true
 [Greeter]
 Timeout=300
 LockGrace=0
+
+# Écran de verrouillage assorti : fond NovaOS « Bloom »
+[Greeter][Wallpaper][org.kde.image][General]
+Image=file:///usr/share/wallpapers/NovaOS-Bloom/contents/images/1920x1080.jpg

@@ -1,0 +1,5 @@
+# NovaOS — mémoire compressée en RAM (zram) : moins d'accès disque,
+# bureau plus réactif quand la mémoire se remplit.
+ALGO=zstd
+PERCENT=50
+PRIORITY=100

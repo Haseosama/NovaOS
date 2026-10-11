@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Id": "org.novaos.sysmon",
+        "Name": "NovaOS System",
+        "Name[fr]": "Système NovaOS",
+        "Description": "CPU and memory usage, NovaOS glass style",
+        "Description[fr]": "Processeur et mémoire en temps réel, style verre NovaOS",
+        "Icon": "utilities-system-monitor",
+        "Category": "System Information",
+        "Authors": [ { "Name": "NovaOS Project" } ],
+        "License": "MIT",
+        "Version": "2026.10",
+        "Website": "https://github.com/Haseosama/NovaOS"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

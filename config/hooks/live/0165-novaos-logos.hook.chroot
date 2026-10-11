@@ -1,0 +1,76 @@
+#!/bin/bash
+#
+# NovaOS — hook live-build : logo NovaOS partout à la place du logo Debian
+#   • photo de compte (Paramètres > Utilisateurs, écran de connexion,
+#     écran de verrouillage, menu Démarrer) pour le compte live et les
+#     nouveaux comptes ;
+#   • icônes « logo de la distribution » (menu Démarrer, À propos, Discover…).
+#
+AVATAR=/usr/share/plasma/avatars/novaos.png
+[ -f "$AVATAR" ] || exit 0
+
+# Photo du compte : AccountsService (lu par Plasma, SDDM et l'écran de
+# verrouillage) et ~/.face pour les applications plus anciennes
+set_face() {
+    local u="$1" home="$2"
+    mkdir -p /var/lib/AccountsService/icons /var/lib/AccountsService/users
+    install -m 644 "$AVATAR" "/var/lib/AccountsService/icons/$u"
+    f="/var/lib/AccountsService/users/$u"
+    if [ -f "$f" ] && grep -q '^Icon=' "$f"; then
+        sed -i "s#^Icon=.*#Icon=/var/lib/AccountsService/icons/$u#" "$f"
+    else
+        [ -f "$f" ] || echo "[User]" > "$f"
+        echo "Icon=/var/lib/AccountsService/icons/$u" >> "$f"
+    fi
+    chmod 600 "$f"
+    if [ -d "$home" ]; then
+        install -m 644 "$AVATAR" "$home/.face"
+        ln -sf .face "$home/.face.icon"
+        chown -h "$u:" "$home/.face" "$home/.face.icon" 2>/dev/null || true
+    fi
+}
+install -m 644 "$AVATAR" /etc/skel/.face
+ln -sf .face /etc/skel/.face.icon
+if id user >/dev/null 2>&1; then
+    set_face user "$(getent passwd user | cut -d: -f6)"
+fi
+# Écran de connexion (SDDM) : photo par défaut quand le compte n'en a pas
+if [ -d /usr/share/sddm ]; then
+    mkdir -p /usr/share/sddm/faces
+    install -m 644 "$AVATAR" /usr/share/sddm/faces/.face.icon
+    [ -e /usr/share/sddm/faces/user.face.icon ] && install -m 644 "$AVATAR" /usr/share/sddm/faces/user.face.icon
+fi
+echo "[novaos] photo de compte NovaOS installée"
+
+# Comptes créés plus tard (installateur, Paramètres > Utilisateurs) :
+# photo NovaOS par défaut à leur première connexion
+cat > /etc/profile.d/novaos-face.sh <<'SH'
+# NovaOS : photo de compte par défaut
+if [ -n "$HOME" ] && [ ! -e "$HOME/.face" ] && [ -f /usr/share/plasma/avatars/novaos.png ]; then
+    cp /usr/share/plasma/avatars/novaos.png "$HOME/.face" 2>/dev/null && ln -sf .face "$HOME/.face.icon" 2>/dev/null
+fi
+SH
+chmod 644 /etc/profile.d/novaos-face.sh
+
+# Icônes du logo de la distribution dans le thème NovaOS (prioritaire sur
+# Papirus et Breeze, qui affichent sinon le logo Debian ou KDE)
+D=/usr/share/icons/NovaOS/scalable/apps
+if [ -f "$D/novaos-logo.svg" ]; then
+    for n in start-here start-here-kde start-here-kde-plasma start-here-symbolic \
+             start-here-kde-symbolic start-here-kde-plasma-symbolic start-here-debian \
+             distributor-logo distributor-logo-debian debian-logo emblem-debian \
+             debian-swirl kde-start-here; do
+        ln -sf novaos-logo.svg "$D/$n.svg"
+    done
+    gtk-update-icon-cache -q -f /usr/share/icons/NovaOS 2>/dev/null || true
+fi
+gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null || true
+
+# Logo Debian générique des anciennes applications
+[ -f /usr/share/pixmaps/debian-logo.png ] && install -m 644 /usr/share/pixmaps/novaos-logo.png /usr/share/pixmaps/debian-logo.png
+
+# Repérer les logos Debian restants (pour le journal de construction)
+left="$(find /usr/share/pixmaps /usr/share/plasma/avatars /usr/share/sddm /usr/share/plymouth \
+        /usr/share/desktop-base /usr/share/images -iname '*debian*' 2>/dev/null | head -n 15 | tr '\n' ' ')"
+echo "[novaos] logos Debian restants (non utilisés par défaut) : ${left:-aucun}"
+exit 0

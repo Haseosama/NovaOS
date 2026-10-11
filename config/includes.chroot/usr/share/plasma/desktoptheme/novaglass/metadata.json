@@ -1,0 +1,13 @@
+{
+    "KPlugin": {
+        "Id": "novaglass",
+        "Name": "NovaGlass",
+        "Description": "NovaOS liquid glass: translucent blurred taskbar",
+        "Description[fr]": "Verre liquide NovaOS : barre des tâches translucide et floutée",
+        "Authors": [ { "Name": "NovaOS Project" } ],
+        "License": "MIT",
+        "Version": "2026.10",
+        "Website": "https://github.com/Haseosama/NovaOS"
+    },
+    "X-Plasma-API": "5.0"
+}

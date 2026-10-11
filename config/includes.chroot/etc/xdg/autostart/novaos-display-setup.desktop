@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=NovaOS — résolution par défaut
+Comment=Passe l'écran en 1920x1080 au premier démarrage s'il le permet
+Exec=/usr/local/bin/novaos-display-setup
+Icon=video-display
+Terminal=false
+NoDisplay=true
+X-KDE-autostart-phase=2
+OnlyShowIn=KDE;

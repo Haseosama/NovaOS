@@ -1,0 +1,9 @@
+#!/bin/sh
+# NovaOS — lance JDownloader 2. Il se met à jour tout seul : on lui donne
+# un dossier personnel (~/.local/share/jdownloader) à la première ouverture.
+DIR="$HOME/.local/share/jdownloader"
+if [ ! -f "$DIR/JDownloader.jar" ]; then
+    mkdir -p "$DIR"
+    cp /opt/jdownloader/JDownloader.jar "$DIR/" || exit 1
+fi
+cd "$DIR" && exec java -jar JDownloader.jar "$@"

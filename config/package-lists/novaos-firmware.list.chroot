@@ -11,3 +11,7 @@ firmware-brcm80211
 # Microcodes CPU (correctifs de sécurité matériels)
 amd64-microcode
 intel-microcode
+# Wi-Fi supplémentaires (MediaTek, TI, Marvell)
+firmware-mediatek
+firmware-ti-connectivity
+firmware-libertas

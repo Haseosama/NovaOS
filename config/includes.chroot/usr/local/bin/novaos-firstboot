@@ -8,6 +8,16 @@
 #
 set -u
 
+# Session live : on ne touche jamais au compte « user », mais on lui donne
+# sudo sans mot de passe (comme live-config). Hors live, cette règle est
+# supprimée.
+if [ -d /run/live/medium ]; then
+    echo 'user ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/novaos-live
+    chmod 0440 /etc/sudoers.d/novaos-live
+    exit 0
+fi
+rm -f /etc/sudoers.d/novaos-live
+
 if getent passwd user >/dev/null 2>&1; then
     other="$(getent passwd | awk -F: '$1 != "user" && $3 >= 1000 && $3 < 65534 && $7 !~ /(nologin|false)$/ { print $1; exit }')"
     if [ -n "$other" ]; then

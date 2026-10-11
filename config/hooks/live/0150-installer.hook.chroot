@@ -6,10 +6,44 @@ set -e
 
 # --- Déploie notre configuration Calamares (écrase l'éventuelle config par défaut) ---
 # Le staging est déposé via includes.chroot dans /usr/share/novaos/calamares-staging/
+#
+# On garde la configuration de Debian (calamares-settings-debian), testée de
+# bout en bout : séquence complète (démontage, clé LUKS de démarrage,
+# initramfs, GRUB EFI/BIOS…) et réglages de chaque module. NovaOS n'y change
+# que le habillage, le partitionnement (chiffrement proposé), la politique de
+# mots de passe et le nom de l'entrée EFI.
 STAGING="/usr/share/novaos/calamares-staging"
 if [ -d "$STAGING" ]; then
-    mkdir -p /etc/calamares
-    cp -a "$STAGING"/. /etc/calamares/
+    mkdir -p /etc/calamares/modules
+    if [ -f /etc/calamares/settings.conf ] && grep -q '^branding:' /etc/calamares/settings.conf; then
+        sed -i 's/^branding:.*/branding: novaos/' /etc/calamares/settings.conf
+        # Le compte live « user » fait partie de l'image NovaOS (il n'est pas
+        # créé au démarrage comme chez Debian) : on le retire du système installé
+        if ! grep -qE '^ +- removeuser *$' /etc/calamares/settings.conf; then
+            sed -i '0,/^\( *\)- umount *$/s//\1- removeuser\n&/' /etc/calamares/settings.conf
+        fi
+        echo "[novaos] installateur : séquence Debian conservée, habillage NovaOS"
+    else
+        cp "$STAGING/settings.conf" /etc/calamares/settings.conf
+        echo "[novaos] AVERTISSEMENT : installateur : pas de configuration Debian, séquence NovaOS utilisée" >&2
+    fi
+    for m in partition users welcome; do
+        [ -f "$STAGING/modules/$m.conf" ] && cp "$STAGING/modules/$m.conf" "/etc/calamares/modules/$m.conf"
+    done
+    # Modules sans configuration Debian : on prend la nôtre
+    for f in "$STAGING"/modules/*.conf; do
+        [ -f "/etc/calamares/modules/$(basename "$f")" ] || cp "$f" /etc/calamares/modules/
+    done
+    # Entrée du menu de démarrage UEFI : « NovaOS » au lieu de « debian »
+    bl=/etc/calamares/modules/bootloader.conf
+    if [ -f "$bl" ]; then
+        if grep -q '^efiBootloaderId:' "$bl"; then
+            sed -i 's/^efiBootloaderId:.*/efiBootloaderId: "NovaOS"/' "$bl"
+        else
+            echo 'efiBootloaderId: "NovaOS"' >> "$bl"
+        fi
+    fi
+    echo "[novaos] installateur : modules = $(grep -E '^ +- [a-z@-]+ *$' /etc/calamares/settings.conf | tr -s ' \n' ' ')"
 fi
 
 # --- Groupe « novaos-live » ---
@@ -44,5 +78,39 @@ if ! command -v grub-install >/dev/null 2>&1; then
         >/dev/null 2>&1 \
     || echo "[novaos] AVERTISSEMENT : GRUB n'a pas pu être installé (l'installation devra l'installer)."
 fi
+
+
+# --- GRUB pour les deux modes de démarrage du PC à installer ---
+# grub-install --target=i386-pc (PC en BIOS / « Legacy ») a besoin de
+# grub-pc-bin, et --target=x86_64-efi (PC en UEFI) de grub-efi-amd64-bin :
+# les deux coexistent, contrairement à grub-pc / grub-efi-amd64.
+DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    grub-pc-bin grub-efi-amd64-bin grub2-common grub-common efibootmgr os-prober \
+    >/dev/null 2>&1 || true
+DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    grub-efi-amd64-signed shim-signed >/dev/null 2>&1 || true
+for d in i386-pc x86_64-efi; do
+    if [ -d "/usr/lib/grub/$d" ]; then
+        echo "[novaos] installateur : GRUB $d présent"
+    else
+        echo "[novaos] AVERTISSEMENT : installateur : GRUB $d absent" >&2
+    fi
+done
+
+# --- Une seule icône d'installation : « Installer NovaOS » ---
+# calamares-settings-debian ajoute « Install Debian » sur le bureau au
+# démarrage (autostart add-calamares-desktop-icon) : on le retire.
+rm -f /etc/xdg/autostart/calamares-desktop-icon.desktop \
+      /etc/xdg/autostart/add-calamares-desktop-icon.desktop
+rm -f /etc/skel/Desktop/install-debian.desktop /home/*/Desktop/install-debian.desktop
+if [ -f /usr/share/applications/install-debian.desktop ]; then
+    grep -q '^NoDisplay=' /usr/share/applications/install-debian.desktop \
+        || sed -i '/^\[Desktop Entry\]/a NoDisplay=true' /usr/share/applications/install-debian.desktop
+fi
+if [ -x /usr/bin/add-calamares-desktop-icon ]; then
+    printf '#!/bin/sh\n# NovaOS : icône « Installer NovaOS » fournie par /etc/skel\nexit 0\n' \
+        > /usr/bin/add-calamares-desktop-icon
+fi
+echo "[novaos] icône « Install Debian » retirée"
 
 exit 0

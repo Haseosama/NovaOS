@@ -1,27 +1,137 @@
 # NovaOS — thème par défaut (système, tous utilisateurs)
-# Look futuriste inspiré de Windows 11 : sombre, accent bleu #0078D4, simple clic.
+# Look futuriste inspiré de Windows 11 : sombre, accent bleu #0078D4,
+# police Inter, simple clic.
 
 [General]
 ColorScheme=NovaOS-Dark
 Name=NovaOS Dark
 shadeSortColumn=true
+font=Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+menuFont=Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+toolBarFont=Inter,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+smallestReadableFont=Inter,8,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+fixed=JetBrains Mono,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+
+[WM]
+activeBackground=18,22,34,190
+activeBlend=18,22,34,190
+activeForeground=239,240,241,255
+inactiveBackground=18,22,34,165
+inactiveBlend=18,22,34,165
+inactiveForeground=150,158,170,255
+activeFont=Inter,10,-1,5,600,0,0,0,0,0,0,0,0,0,0,1
 
 [Icons]
-Theme=Papirus-Dark
+Theme=NovaOS
 
 [KDE]
-LookAndFeelPackage=org.kde.breezedark.desktop
+LookAndFeelPackage=org.novaos.desktop
 widgetStyle=Breeze
-# Windows 11 ouvre les dossiers d'un simple clic
-SingleClick=true
+# Comme sous Windows : un clic sélectionne, un double-clic ouvre
+SingleClick=false
+# Animations un peu plus vives (1.0 = normal, < 1 = plus rapide)
+AnimationDurationFactor=0.7
 
 [Mouse]
 cursorTheme=Breeze_Snow
 
-[WM]
-activeBackground=0,120,212,255
-activeBlend=0,120,212,255
-activeForeground=255,255,255,255
-inactiveBackground=49,54,59,255
-inactiveForeground=189,195,199,255
-inactiveBlend=239,240,241,255
+# Palette NovaOS-Dark (copie de /usr/share/color-schemes/NovaOS-Dark.colors) :
+# sans ces groupes, les applications retombent sur les couleurs Breeze claires.
+[ColorEffects:Disabled]
+ChangeSelectionColor=true
+Color=56,56,56,255
+ColorAmount=0
+ColorEffect=0
+ContrastAmount=0
+ContrastEffect=1
+IntensityAmount=0
+IntensityEffect=0
+
+[ColorEffects:Inactive]
+ChangeSelectionColor=true
+Color=160,160,160,255
+ColorAmount=0
+ColorEffect=2
+ContrastAmount=0.1
+ContrastEffect=2
+IntensityAmount=0.1
+IntensityEffect=2
+
+[Colors:Button]
+BackgroundNormal=49,54,59,255
+BackgroundAlternate=49,54,59,255
+ForegroundNormal=239,240,241,255
+ForegroundInactive=189,195,199,255
+ForegroundNegative=218,68,83,255
+ForegroundNeutral=246,116,0,255
+ForegroundPositive=39,174,96,255
+ForegroundVisited=127,140,141,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255
+
+[Colors:Complementary]
+BackgroundNormal=35,38,41,255
+BackgroundAlternate=49,54,59,255
+ForegroundNormal=239,240,241,255
+ForegroundInactive=189,195,199,255
+ForegroundNegative=218,68,83,255
+ForegroundNeutral=246,116,0,255
+ForegroundPositive=39,174,96,255
+ForegroundVisited=127,140,141,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255
+
+[Colors:Selection]
+BackgroundNormal=0,120,212,255
+BackgroundAlternate=0,90,158,255
+ForegroundNormal=255,255,255,255
+ForegroundInactive=252,252,252,255
+ForegroundNegative=218,68,83,255
+ForegroundNeutral=246,116,0,255
+ForegroundPositive=39,174,96,255
+ForegroundVisited=127,140,141,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255
+
+[Colors:Tooltip]
+BackgroundNormal=35,38,41,255
+BackgroundAlternate=49,54,59,255
+ForegroundNormal=239,240,241,255
+ForegroundInactive=189,195,199,255
+ForegroundNegative=218,68,83,255
+ForegroundNeutral=246,116,0,255
+ForegroundPositive=39,174,96,255
+ForegroundVisited=127,140,141,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255
+
+[Colors:View]
+BackgroundNormal=35,38,41,255
+BackgroundAlternate=41,44,47,255
+ForegroundNormal=239,240,241,255
+ForegroundInactive=189,195,199,255
+ForegroundNegative=218,68,83,255
+ForegroundNeutral=246,116,0,255
+ForegroundPositive=39,174,96,255
+ForegroundVisited=127,140,141,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255
+
+[Colors:Window]
+BackgroundNormal=24,28,40,255
+BackgroundAlternate=19,22,32,255
+ForegroundNormal=239,240,241,255
+ForegroundInactive=189,195,199,255
+ForegroundNegative=218,68,83,255
+ForegroundNeutral=246,116,0,255
+ForegroundPositive=39,174,96,255
+ForegroundVisited=127,140,141,255
+DecorationFocus=0,190,255,255
+DecorationHover=0,229,255,255
+
+# Miniatures de l'explorateur : aussi pour les gros fichiers (films de
+# plusieurs Go) et les disques réseau / clés USB
+[PreviewSettings]
+MaximumSize=107374182400
+MaximumRemoteSize=10737418240
+EnableRemoteFolderThumbnail=true

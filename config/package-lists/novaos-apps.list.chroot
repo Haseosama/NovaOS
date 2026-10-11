@@ -35,3 +35,12 @@ smartmontools
 
 # Client SSH uniquement — aucun serveur (pas de surface d'attaque réseau)
 openssh-client
+
+# --- Programmes Windows & boutique d'applications ---
+# Wine (64 + 32 bits) est installé par le hook 0125-windows-apps
+# (il faut d'abord activer l'architecture i386).
+flatpak
+plasma-discover
+plasma-discover-backend-flatpak
+kde-config-flatpak
+fastfetch

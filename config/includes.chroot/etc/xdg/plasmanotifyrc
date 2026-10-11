@@ -1,0 +1,9 @@
+# NovaOS — copies de fichiers façon Windows : la fenêtre de copie avec le
+# graphique de vitesse vient de novaos-copy-progress ; la notification de
+# Plasma (pause / annuler) se replie dans la zone de notification au lieu de
+# rester affichée par-dessus, et la progression apparaît sur l'icône de la
+# barre des tâches.
+[Jobs]
+InNotifications=true
+PermanentPopups=false
+InTaskManager=true

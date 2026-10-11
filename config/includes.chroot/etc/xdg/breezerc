@@ -1,0 +1,12 @@
+# NovaOS — décoration de fenêtres Breeze, façon verre (titre sombre translucide)
+[Common]
+OutlineCloseButton=false
+
+[Windeco]
+DrawBackgroundGradient=false
+DrawTitleBarSeparator=false
+OutlineCloseButton=false
+ButtonSize=ButtonDefault
+TitleAlignment=AlignLeft
+ShadowSize=ShadowLarge
+ShadowStrength=200

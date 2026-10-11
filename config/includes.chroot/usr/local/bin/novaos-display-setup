@@ -1,0 +1,50 @@
+#!/bin/bash
+#
+# NovaOS — résolution par défaut 1920x1080 (une seule fois par compte)
+#
+# Au premier démarrage de la session, chaque écran affiché en dessous de
+# 1920x1080 passe en 1920x1080 SI l'écran propose ce mode. Les écrans plus
+# grands (2K, 4K) et ceux qui ne savent pas afficher 1920x1080 ne sont pas
+# touchés. Ensuite, le réglage se change normalement dans
+# Configuration du système → Affichage.
+#
+# En machine virtuelle (VMware, VirtualBox, QEMU…), on ne force rien : la
+# taille suit la fenêtre de la VM grâce aux outils invités (open-vm-tools,
+# spice-vdagent…), sinon 1920x1080 déborde et coupe le bas de l'écran
+# (barre des tâches invisible).
+#
+set -u
+
+MARKER="$HOME/.config/novaos/display-configured"
+[ -f "$MARKER" ] && exit 0
+command -v kscreen-doctor >/dev/null 2>&1 || exit 0
+if command -v systemd-detect-virt >/dev/null 2>&1 && systemd-detect-virt --vm --quiet; then
+    mkdir -p "$(dirname "$MARKER")"
+    touch "$MARKER"
+    exit 0
+fi
+
+# Laisse KScreen démarrer
+sleep 3
+
+out="$(kscreen-doctor -o 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g')"
+[ -n "$out" ] || exit 0
+
+# Une ligne par écran : « Output: <id> <nom> enabled connected … Modes: … »
+echo "$out" | tr '\n' ' ' | sed 's/Output: /\nOutput: /g' | grep '^Output:' | while read -r line; do
+    name="$(echo "$line" | awk '{print $3}')"
+    echo "$line" | grep -qw enabled || continue
+    echo "$line" | grep -qw connected || continue
+    # Mode actuel (marqué « * ») et mode 1920x1080 proposé
+    current="$(echo "$line" | grep -o '[0-9]*:[0-9]*x[0-9]*@[0-9.]*\*' | head -n1)"
+    cur_w="$(echo "$current" | sed 's/^[0-9]*:\([0-9]*\)x.*/\1/')"
+    target="$(echo "$line" | grep -o '[0-9]*:1920x1080@[0-9.]*' | head -n1 | cut -d: -f1)"
+    [ -n "$target" ] || continue
+    if [ -n "$cur_w" ] && [ "$cur_w" -lt 1920 ]; then
+        kscreen-doctor "output.${name}.mode.${target}" >/dev/null 2>&1 || true
+    fi
+done
+
+mkdir -p "$(dirname "$MARKER")"
+touch "$MARKER"
+exit 0

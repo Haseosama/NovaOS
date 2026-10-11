@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Réglages Windows (Wine)
+GenericName=Configuration de Wine
+Comment=Version de Windows simulée, lecteurs, audio et bibliothèques
+Exec=winecfg
+Icon=wine
+Terminal=false
+Categories=System;Emulator;Settings;
+Keywords=windows;exe;wine;winecfg;

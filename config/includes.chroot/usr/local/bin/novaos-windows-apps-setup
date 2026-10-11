@@ -1,0 +1,38 @@
+#!/bin/bash
+#
+# NovaOS — installe en arrière-plan, à la première session de chaque compte,
+# les programmes Windows fournis avec NovaOS (/usr/share/novaos/windows-apps :
+# XMedia Recode, RMovieDatabase…), via Wine, en mode silencieux.
+# Ils apparaissent ensuite dans le menu Démarrer (rubrique « Wine »).
+#
+set -u
+SRC=/usr/share/novaos/windows-apps
+STATE="$HOME/.config/novaos/windows-apps"
+command -v wine >/dev/null 2>&1 || exit 0
+ls "$SRC"/*.exe >/dev/null 2>&1 || exit 0
+mkdir -p "$STATE"
+
+notify() { command -v notify-send >/dev/null 2>&1 && notify-send -a NovaOS -i wine "$1" "$2" 2>/dev/null || true; }
+
+# Laisse la session finir de démarrer
+sleep 20
+todo=0
+for exe in "$SRC"/*.exe; do [ -f "$STATE/$(basename "$exe").done" ] || todo=$((todo + 1)); done
+[ "$todo" -gt 0 ] || exit 0
+
+notify "Programmes Windows" "Installation de $todo programme(s) Windows en arrière-plan…"
+export WINEDEBUG=-all
+for exe in "$SRC"/*.exe; do
+    name="$(basename "$exe")"
+    [ -f "$STATE/$name.done" ] && continue
+    # Installateurs Inno Setup / NSIS : options silencieuses
+    if wine "$exe" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /S >"$STATE/$name.log" 2>&1; then
+        touch "$STATE/$name.done"
+        notify "Programmes Windows" "${name%.exe} installé (menu Démarrer → Wine)."
+    else
+        notify "Programmes Windows" "${name%.exe} : installation échouée, double-cliquez sur $exe pour réessayer."
+        touch "$STATE/$name.done"
+    fi
+done
+command -v kbuildsycoca6 >/dev/null 2>&1 && kbuildsycoca6 >/dev/null 2>&1 || true
+exit 0

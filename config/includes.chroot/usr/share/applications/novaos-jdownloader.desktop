@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=JDownloader 2
+Comment=Gestionnaire de téléchargements
+Exec=/usr/local/bin/novaos-jdownloader
+Icon=folder-download
+Terminal=false
+Categories=Network;FileTransfer;
+StartupWMClass=org-jdownloader-update-launcher-JDLauncher

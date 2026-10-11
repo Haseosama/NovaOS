@@ -32,11 +32,48 @@ if [ "${NOVAOS_AUTOLOGIN}" != "true" ]; then
 fi
 
 # Utilisateur principal : premier compte humain (uid >= 1000) avec un shell valide
-primary_user="$(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 && $7 !~ /(nologin|false)$/ { print $1; exit }')"
-[ -n "$primary_user" ] || exit 0
+find_user() {
+    getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 && $7 !~ /(nologin|false)$/ { print $1; exit }'
+}
+primary_user="$(find_user)"
 
-# Session Plasma (Wayland par défaut sur Plasma 6)
-session="plasma.desktop"
+# Session live : le compte « user » est créé au démarrage par live-config,
+# parfois juste après nous. On l'attend (30 s au plus) au lieu d'abandonner.
+if [ -z "$primary_user" ] && [ -d /run/live/medium ]; then
+    for _ in $(seq 1 30); do
+        sleep 1
+        primary_user="$(find_user)"
+        [ -n "$primary_user" ] && break
+    done
+fi
+if [ -z "$primary_user" ]; then
+    echo "novaos-autologin : aucun compte utilisateur trouvé, connexion automatique non configurée"
+    exit 0
+fi
+
+# Session Plasma (Wayland par défaut sur Plasma 6, sinon X11) : on ne
+# retient qu'un fichier de session qui existe vraiment, sinon SDDM ignore
+# la connexion automatique et affiche l'écran de connexion.
+session=""
+for f in /usr/share/wayland-sessions/plasma.desktop \
+         /usr/share/xsessions/plasmax11.desktop \
+         /usr/share/xsessions/plasma.desktop; do
+    if [ -f "$f" ]; then
+        session="$(basename "$f")"
+        break
+    fi
+done
+if [ -z "$session" ]; then
+    echo "novaos-autologin : aucune session Plasma installée, connexion automatique non configurée"
+    exit 0
+fi
+
+# /etc/sddm.conf (écrit par live-config en session live) a la PRIORITÉ sur
+# /etc/sddm.conf.d/ : on y retire son bloc [Autologin] pour que le nôtre
+# s'applique.
+if [ -f /etc/sddm.conf ] && grep -q '^\[Autologin\]' /etc/sddm.conf; then
+    sed -i '/^\[Autologin\]/,/^\[/{ /^\[Autologin\]/d; /^\[/!d; }' /etc/sddm.conf
+fi
 
 cat > "$CONF_FILE" <<EOF
 # Généré par NovaOS — connexion automatique sur le bureau
@@ -48,4 +85,5 @@ Relogin=false
 EOF
 
 chmod 0644 "$CONF_FILE"
+echo "novaos-autologin : connexion automatique de « ${primary_user} » (session ${session})"
 exit 0

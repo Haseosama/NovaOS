@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NovaOS — fluidité
+Comment=Adapte les effets visuels à la carte graphique
+Exec=/usr/local/bin/novaos-perf-setup
+Terminal=false
+NoDisplay=true
+X-KDE-autostart-phase=2

@@ -1,0 +1,5 @@
+# NovaOS — page « À propos de ce système »
+[General]
+LogoPath=/usr/share/icons/hicolor/256x256/apps/novaos-logo.png
+Website=https://github.com/Haseosama/NovaOS
+Variant=Édition Futuriste

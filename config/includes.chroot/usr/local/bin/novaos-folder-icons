@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""NovaOS — icônes de dossiers façon Windows dans l'Explorateur (Dolphin).
+
+Windows personnalise un dossier avec desktop.ini (IconResource= / IconFile=,
+souvent un .ico à côté) ou avec une image folder.jpg. Dolphin, lui, lit un
+fichier .directory. Ce script crée le .directory correspondant pour chaque
+dossier trouvé :
+  1. desktop.ini → l'icône .ico/.png indiquée ;
+  2. sinon folder.jpg / cover.jpg / poster.jpg / folder.png → cette image.
+Les dossiers déjà réglés à la main ne sont pas touchés.
+
+Usage : novaos-folder-icons [dossier…]   (par défaut : le dossier personnel)
+Lancé à chaque ouverture de session et depuis le clic droit de l'Explorateur
+(« Appliquer les icônes de dossiers Windows »).
+"""
+import configparser, os, sys
+
+IMAGES = ("folder.jpg", "folder.png", "cover.jpg", "cover.png", "poster.jpg", "poster.png")
+MAX_DEPTH = 6
+SKIP = {".cache", ".local", ".wine", ".var", ".mozilla", "node_modules", ".git"}
+
+def read_text(path):
+    raw = open(path, "rb").read()
+    for enc in ("utf-16", "utf-8-sig", "cp1252"):
+        try:
+            if enc == "utf-16" and not raw.startswith((b"\xff\xfe", b"\xfe\xff")):
+                continue
+            return raw.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("latin-1")
+
+def find_ci(folder, rel):
+    """Retrouve un chemin Windows relatif (\\, casse quelconque) dans folder."""
+    cur = folder
+    for part in rel.replace("\\", "/").split("/"):
+        if part in ("", "."):
+            continue
+        if part == "..":
+            cur = os.path.dirname(cur); continue
+        try:
+            names = {n.lower(): n for n in os.listdir(cur)}
+        except OSError:
+            return None
+        if part.lower() not in names:
+            return None
+        cur = os.path.join(cur, names[part.lower()])
+    return cur if os.path.isfile(cur) else None
+
+def icon_from_desktop_ini(folder, ini_path):
+    cp = configparser.ConfigParser(interpolation=None, strict=False)
+    try:
+        cp.read_string(read_text(ini_path))
+    except Exception:
+        return None
+    for sec in cp.sections():
+        if sec.strip().lower() != ".shellclassinfo":
+            continue
+        s = cp[sec]
+        val = s.get("IconResource") or s.get("IconFile") or ""
+        val = val.split(",")[0].strip().strip('"')
+        if not val or "%" in val or val.lower().endswith((".dll", ".exe")):
+            return None
+        if len(val) > 2 and val[1] == ":":      # C:\... : on garde le nom de fichier
+            val = val.replace("\\", "/").split("/")[-1]
+        return find_ci(folder, val)
+    return None
+
+def icon_for(folder, files):
+    lower = {f.lower(): f for f in files}
+    if "desktop.ini" in lower:
+        icon = icon_from_desktop_ini(folder, os.path.join(folder, lower["desktop.ini"]))
+        if icon:
+            return icon
+    for name in IMAGES:
+        if name in lower:
+            return os.path.join(folder, lower[name])
+    return None
+
+def apply(folder, icon):
+    dfile = os.path.join(folder, ".directory")
+    cp = configparser.ConfigParser(interpolation=None, strict=False)
+    cp.optionxform = str
+    if os.path.exists(dfile):
+        try:
+            cp.read(dfile, encoding="utf-8")
+        except Exception:
+            return False
+        if cp.has_option("Desktop Entry", "Icon") and not cp.has_option("Desktop Entry", "X-NovaOS-Auto"):
+            return False                          # réglé à la main : on laisse
+    if not cp.has_section("Desktop Entry"):
+        cp.add_section("Desktop Entry")
+    if cp.get("Desktop Entry", "Icon", fallback="") == icon:
+        return False
+    cp.set("Desktop Entry", "Icon", icon)
+    cp.set("Desktop Entry", "X-NovaOS-Auto", "true")
+    try:
+        with open(dfile, "w", encoding="utf-8") as fh:
+            cp.write(fh, space_around_delimiters=False)
+        return True
+    except OSError:
+        return False                              # disque en lecture seule…
+
+def walk(root):
+    count = 0
+    base = root.rstrip("/").count("/")
+    for folder, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if d not in SKIP and not d.startswith(".")]
+        if folder.count("/") - base >= MAX_DEPTH:
+            dirs[:] = []
+        icon = icon_for(folder, files)
+        if icon and apply(folder, icon):
+            count += 1
+    return count
+
+def main():
+    roots = sys.argv[1:] or [os.path.expanduser("~")]
+    total = sum(walk(r) for r in roots if os.path.isdir(r))
+    print(f"NovaOS : {total} dossier(s) personnalisé(s)")
+
+if __name__ == "__main__":
+    main()
