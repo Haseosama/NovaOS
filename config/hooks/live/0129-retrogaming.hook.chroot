@@ -1,0 +1,89 @@
+#!/bin/bash
+#
+# NovaOS — hook live-build : rétrogaming façon Batocera / RetroBat, en natif
+#   • ES-DE (EmulationStation Desktop Edition) : l'interface plein écran
+#     de Batocera et RetroBat, pilotable à la manette ;
+#   • RetroArch + cœurs libretro (NES, SNES, Mega Drive, Game Boy, GBA,
+#     PlayStation, N64, Nintendo DS, arcade…) ;
+#   • émulateurs autonomes : Dolphin (GameCube / Wii), mGBA, DeSmuME…
+# Batocera est un système complet et RetroBat ne tourne que sous Windows :
+# on reprend donc leurs briques, intégrées à NovaOS (menu Jeux).
+# Chaque paquet est facultatif : la construction continue s'il manque.
+#
+
+apt_retry() {
+    local i
+    for i in 1 2 3; do
+        DEBIAN_FRONTEND=noninteractive apt-get "$@" && return 0
+        sleep 5
+    done
+    return 1
+}
+
+installed=""
+missing=""
+for p in retroarch retroarch-assets libretro-core-info \
+         libretro-nestopia libretro-snes9x libretro-bsnes-mercury-accuracy \
+         libretro-genesisplusgx libretro-gambatte libretro-mgba \
+         libretro-beetle-psx libretro-beetle-pce-fast libretro-beetle-vb \
+         libretro-beetle-wswan libretro-mupen64plus libretro-desmume \
+         libretro-gtk-1-0 \
+         dolphin-emu mgba-qt desmume mednafen fceux; do
+    if apt_retry install -y --no-install-recommends "$p" >/dev/null 2>&1; then
+        installed="$installed $p"
+    else
+        missing="$missing $p"
+    fi
+done
+echo "[novaos] rétrogaming : installés :$installed"
+[ -n "$missing" ] && echo "[novaos] AVERTISSEMENT : rétrogaming : indisponibles :$missing" >&2
+
+# --- ES-DE : dernière version officielle (AppImage), extraite dans /opt/es-de ---
+url="$(curl -fsSL --retry 3 'https://gitlab.com/api/v4/projects/es-de%2Femulationstation-de/releases?per_page=1' 2>/dev/null \
+    | python3 -c 'import json,sys
+r=json.load(sys.stdin)[0]
+for l in r["assets"]["links"]:
+    if l["name"].endswith("_x64.AppImage") and "SteamDeck" not in l["name"]:
+        print(l.get("direct_asset_url") or l["url"]); break' 2>/dev/null)"
+ver="$(curl -fsSL --retry 3 'https://gitlab.com/api/v4/projects/es-de%2Femulationstation-de/releases?per_page=1' 2>/dev/null \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["tag_name"])' 2>/dev/null)"
+ok=0
+if [ -n "$url" ] && curl -fsSL --retry 3 -o /tmp/es-de.AppImage "$url"; then
+    chmod +x /tmp/es-de.AppImage
+    rm -rf /opt/es-de /tmp/squashfs-root
+    if (cd /tmp && ./es-de.AppImage --appimage-extract >/dev/null 2>/tmp/es-de.log) && [ -x /tmp/squashfs-root/AppRun ]; then
+        mv /tmp/squashfs-root /opt/es-de
+        chmod -R a+rX /opt/es-de
+        ok=1
+    fi
+    rm -f /tmp/es-de.AppImage /tmp/es-de.log; rm -rf /tmp/squashfs-root
+fi
+
+if [ "$ok" = 1 ]; then
+    icon="$(find /opt/es-de -maxdepth 1 \( -name '*.svg' -o -name '*.png' \) | head -n1)"
+    cat > /usr/local/bin/novaos-retro <<'SH'
+#!/bin/sh
+# NovaOS Retro : ES-DE en plein écran (manette ou clavier).
+# Les jeux vont dans ~/ROMs/<console> (dossiers créés au premier lancement),
+# les BIOS dans ~/ROMs/bios ; RetroArch et ses cœurs sont trouvés tout seuls.
+mkdir -p "$HOME/ROMs/bios"
+exec /opt/es-de/AppRun "$@"
+SH
+    chmod 755 /usr/local/bin/novaos-retro
+    cat > /usr/share/applications/novaos-retro.desktop <<DESK
+[Desktop Entry]
+Type=Application
+Name=NovaOS Retro (ES-DE)
+GenericName=Rétrogaming façon Batocera
+Comment=Toutes vos consoles rétro en plein écran, à la manette
+Exec=/usr/local/bin/novaos-retro
+Icon=${icon:-applications-games}
+Terminal=false
+Categories=Game;Emulator;
+Keywords=batocera;retrobat;emulationstation;retroarch;emulateur;roms;
+DESK
+    echo "[novaos] rétrogaming : ES-DE ${ver:-?} installé (menu Jeux > NovaOS Retro)"
+else
+    echo "[novaos] AVERTISSEMENT : rétrogaming : ES-DE introuvable, RetroArch reste disponible seul" >&2
+fi
+exit 0
